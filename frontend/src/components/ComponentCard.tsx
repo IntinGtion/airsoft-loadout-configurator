@@ -1,4 +1,5 @@
 import type { ComponentResponse } from '../api/types'
+import { formatPrice, formatWeight } from '../lib/format'
 import styles from './ComponentCard.module.css'
 
 interface Props {
@@ -30,15 +31,13 @@ export function ComponentCard({ component, onAdd }: Props) {
         {component.weightGrams != null && (
           <span className={styles.stat}>
             <span className={styles.statLabel}>Weight</span>
-            {component.weightGrams >= 1000
-              ? `${(component.weightGrams / 1000).toFixed(2).replace(/\.?0+$/, '')} kg`
-              : `${component.weightGrams} g`}
+            {formatWeight(component.weightGrams)}
           </span>
         )}
         {component.priceEur != null && (
           <span className={styles.stat}>
             <span className={styles.statLabel}>Price</span>
-            €{component.priceEur.toLocaleString('de-DE')}
+            {formatPrice(component.priceEur)}
           </span>
         )}
       </div>

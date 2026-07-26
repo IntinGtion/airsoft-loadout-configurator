@@ -2,6 +2,7 @@ import type {
   AttachmentTypeResponse,
   CategoryResponse,
   ComponentResponse,
+  LoadoutItemResponse,
   LoadoutResponse,
   LoadoutSummary,
 } from './types'

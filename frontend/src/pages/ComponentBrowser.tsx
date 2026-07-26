@@ -1,31 +1,11 @@
-import { useEffect, useState } from 'react'
-import { api } from '../api'
-import type { CategoryResponse, ComponentResponse } from '../api/types'
+import { useComponents } from '../hooks/useComponents'
 import { CategoryNav } from '../components/CategoryNav'
 import { ComponentCard } from '../components/ComponentCard'
 import styles from './ComponentBrowser.module.css'
 
 export function ComponentBrowser() {
-  const [categories, setCategories]   = useState<CategoryResponse[]>([])
-  const [components, setComponents]   = useState<ComponentResponse[]>([])
-  const [selected, setSelected]       = useState<number | null>(null)
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState<string | null>(null)
-
-  useEffect(() => {
-    api.categories.getAll().then(setCategories).catch(console.error)
-  }, [])
-
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-    api.components.getAll(selected ?? undefined)
-      .then(setComponents)
-      .catch(e => setError(String(e)))
-      .finally(() => setLoading(false))
-  }, [selected])
-
-  const totalWeight = components.reduce((sum, c) => sum + (c.weightGrams ?? 0), 0)
+  const { categories, components, selected, setSelected, loading, error, totalWeight } =
+    useComponents()
 
   return (
     <div className={styles.layout}>
