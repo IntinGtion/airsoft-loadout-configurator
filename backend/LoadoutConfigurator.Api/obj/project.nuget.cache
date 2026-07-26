@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "G5hzanHFR2Y=",
+  "success": true,
+  "projectFilePath": "C:\\Dev\\GitHub\\Airsoft Loadout Configurator\\backend\\LoadoutConfigurator.Api\\LoadoutConfigurator.Api.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\chris\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.10\\microsoft.aspnetcore.openapi.10.0.10.nupkg.sha512",
+    "C:\\Users\\chris\\.nuget\\packages\\microsoft.openapi\\2.7.5\\microsoft.openapi.2.7.5.nupkg.sha512"
+  ],
+  "logs": []
+}
