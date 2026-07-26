@@ -18,12 +18,18 @@ Dieses Dokument erklärt den aktuellen Stand des Projekts, die getroffenen Archi
 
 ## 1. Projektidee
 
-Ein webbasierter Konfigurator, mit dem Airsoft-Spieler ihre Ausrüstung (Loadout) visuell zusammenstellen können:
+**Kernidee — das ist wichtig, damit niemand (auch kein zukünftiges KI-Assistenz-Ich) das Projekt versehentlich in die falsche Richtung weiterbaut:**
 
-- Komponenten (Westen, Waffen, Optiken, Pouches) aus einem Katalog auswählen
-- Diese per Drag & Drop auf einer 2D-Silhouetten-Canvas anordnen
-- Gewicht und Kosten live sehen
-- Loadouts per Link teilen (Share-Token)
+Dieser Konfigurator ist **kein Warenkorb-/Wishlist-Tool**. Sowas kann man auf jeder Airsoft-Shopseite bauen. Der eigentliche Zweck ist eine **visuelle Kompatibilitäts- und Optik-Prüfung**: Spieler sollen ihre Ausrüstung virtuell zusammenklicken und *sehen*, ob es passt —
+
+- Hat dieser Plattenträger überhaupt genug Platz für diese Kombination aus Taschen?
+- Wie sieht diese Optik montiert auf dieser bestimmten M4 aus?
+- Wie wirkt dieser Griff an diesem Gewehr?
+- Passt der Tan-Ton dieser Weste farblich zu dem der restlichen Ausrüstung?
+
+Das ist eine Frage, die kein Shop beantwortet, weil dort jedes Produkt isoliert für sich steht. Hier soll man das **zusammengesetzte Ergebnis sehen**, bevor man wirklich kauft.
+
+Praktisch heißt das: Komponenten (Westen, Waffen, Optiken, Pouches) aus einem Katalog wählen und per Drag & Drop auf einer 2D-Silhouetten-Canvas an echten Anbaupunkten (Slots) zusammensetzen — nicht nur in eine Liste packen. Die Loadout-Liste mit Gesamtgewicht/-preis (siehe Abschnitt 4, `LoadoutBuilder`) ist bewusst nur eine **Nebenfunktion** — nett zu haben, aber nicht der Grund, warum dieses Projekt existiert. Der Canvas-Konfigurator (Abschnitt 3 "Layered-Rendering-Konzept" und Abschnitt 7 "Mittelfristig") ist das eigentliche Produkt.
 
 **Warum 2D statt 3D?** 3D-Assets für Airsoft-Produkte gibt es nicht frei verfügbar. 2D-SVG-Silhouetten lassen sich in Inkscape/Figma selbst erstellen, sind leichtgewichtig, und passen besser zu react-konva (Canvas-Library).
 
@@ -52,7 +58,7 @@ Ein webbasierter Konfigurator, mit dem Airsoft-Spieler ihre Ausrüstung (Loadout
 | Vite 8 | Deutlich schneller als CRA, HMR out-of-the-box |
 | TypeScript ~6 | Type-Safety, IDE-Support |
 | CSS Modules | Scoped Styles ohne Framework-Overhead; kein Tailwind-Overhead |
-| react-router-dom v7 | Installiert, noch nicht verdrahtet — wird für Multi-Page-Navigation gebraucht |
+| react-router-dom v7 | Verdrahtet für Multi-Page-Navigation (`/`, `/loadout/:id`) |
 | react-konva | Geplant für Canvas/Drag&Drop — noch nicht installiert |
 
 ### Keine UI-Component-Library (kein MUI, kein shadcn)
@@ -97,6 +103,18 @@ Loadout
 - `Component.AcceptedAttachmentTypes` sagt, an welchen Slot-Typen die Komponente befestigt werden kann
 - Beim Hinzufügen zu einem Loadout prüft der Server: passt `Component.AcceptedAttachmentTypes` zu `Slot.AttachmentTypeId`? Wenn nicht → 422 Unprocessable Entity
 - `Slot.PositionXPercent/YPercent` sind geometrische Platzhalter (0–100); exakte Koordinaten kommen später aus Figma/Inkscape
+
+### Layered-Rendering-Konzept für den Canvas-Konfigurator (geplant, siehe Abschnitt 7)
+
+So soll die eigentliche Kernfunktion (siehe Abschnitt 1) technisch funktionieren, sobald echte SVG-/Slot-Daten vorliegen:
+
+1. Eine Basis-Komponente (z.B. Plattenträger, Gewehr) wird als SVG auf die Canvas gelegt.
+2. Ihre `Slot`-Punkte (`PositionXPercent/Y`) markieren Anbaustellen auf dieser Silhouette.
+3. Zieht man eine kompatible Komponente auf einen Slot, wird deren SVG passgenau an dieser Position eingeblendet — nicht als Icon in einer Liste, sondern als echtes zusammengesetztes Bild.
+4. Das ist **rekursiv**: `LoadoutItem.ParentSlotId` verweist auf einen Slot, egal wie tief verschachtelt — eine Tasche kann selbst wieder eigene Slots haben (z.B. für einen Patch), eine Rail selbst wieder für eine Optik. Das Datenmodell trägt das bereits, ohne Änderung.
+5. Die bereits vorhandene 422-Kompatibilitätsprüfung verhindert dann auch visuell falsche Kombinationen direkt beim Draufziehen.
+
+**Colorway-Idee (noch nicht umgesetzt, keine Datenmodell-Änderung bisher):** Statt jede Komponente in jeder Farbe einzeln zu zeichnen, sollten die SVGs als einfarbige Silhouetten angelegt werden, die sich per CSS/SVG-Fill einfärben lassen. Damit ließe sich ein globaler Colorway-Umschalter bauen (Multicam, Ranger Green, Coyote Tan, Black, ...), der das komplette zusammengebaute Loadout in Echtzeit umfärbt — beantwortet direkt die Frage "passt der Tan-Ton zur restlichen Ausrüstung", ohne dass für jede Farbkombination eigenes Artwork nötig wäre.
 
 ### Seed-Daten (16 Produkte)
 
@@ -144,7 +162,7 @@ PUT             /api/loadouts/{id}/items/{itemId}
 DELETE          /api/loadouts/{id}/items/{itemId}
 ```
 
-### Frontend (Grundgerüst)
+### Frontend (Grundgerüst + Nebenfunktion "Loadout-Liste")
 
 - [x] Vite-Proxy: `/api/*` → `http://localhost:5154` (kein CORS-Problem im Dev)
 - [x] TypeScript API-Client (`src/api/index.ts` + `src/api/types.ts`)
@@ -153,9 +171,10 @@ DELETE          /api/loadouts/{id}/items/{itemId}
 - [x] `ComponentCard` — Karte mit Gewicht, Preis, Attachment-Tags, optionalem `+`-Button
 - [x] `ComponentBrowser` — Page mit Grid-Layout, Filterung, Gesamtgewicht
 - [x] App-Shell (Topbar + Body-Layout)
-- [ ] `LoadoutBuilder` — noch nicht gebaut
-- [ ] React-Router-DOM — installiert, aber noch nicht verdrahtet
-- [ ] react-konva Canvas — noch nicht installiert
+- [x] React-Router-DOM aktiviert: `/` → `ComponentBrowser`, `/loadout/:id` → `LoadoutBuilder`
+- [x] `LoadoutBuilder` — Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Items/Gesamtgewicht/-preis, Entfernen
+- [x] `LoadoutSwitcher` — Dropdown im Topbar, listet vorhandene Loadouts (sonst nach Verlassen der Seite nicht mehr auffindbar)
+- [ ] react-konva Canvas — **noch nicht installiert, das ist die eigentliche Kernfunktion (siehe Abschnitt 1 + 3), nicht die Liste oben**
 
 ---
 
@@ -233,19 +252,18 @@ Browser öffnen: **http://localhost:5173**
 
 ## 7. Nächste Schritte
 
-In dieser Reihenfolge geplant:
+**Blocker für alles Weitere:** echte SVG-Silhouetten + echte Slot-Koordinaten von mindestens einer Basis-Komponente (z.B. ein Plattenträger) und einer anbaubaren Komponente (z.B. eine Tasche), damit wir das Zusammenspiel einmal end-to-end bauen können. Das schuldet der Projektinhaber noch (Inkscape/Figma-Arbeit), siehe Abschnitt 1 + 3.
 
-### Kurzfristig — Loadout-Builder Page
-- `LoadoutBuilder.tsx` — Loadout erstellen, Komponenten per `+`-Button hinzufügen
-- Sidebar: aktive Loadout-Items mit Gesamtgewicht + Gesamtpreis
-- `DELETE /api/loadouts/{id}/items/{itemId}` verdrahten für "Entfernen"
-- React-Router-DOM aktivieren: `/` → ComponentBrowser, `/loadout/:id` → LoadoutBuilder
+### Kurzfristig — Loadout-Builder Page ✅ erledigt (2026-07-26)
+War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Gesamtgewicht/-preis, Entfernen, Loadout-Switcher im Topbar. Details siehe Abschnitt 4.
 
-### Mittelfristig — Canvas-Konfigurator
+### Mittelfristig — Canvas-Konfigurator (**das ist die eigentliche Kernfunktion**, siehe Abschnitt 1 + 3 "Layered-Rendering-Konzept")
 - `react-konva` installieren
-- SVG-Silhouetten für Plate Carriers erstellen (Inkscape/Figma)
+- SVG-Silhouetten für mindestens eine Basis-Komponente (Plattenträger) + eine anbaubare Komponente erstellen (Inkscape/Figma) — **wartet auf Assets vom Projektinhaber**
 - Slot-Positionen (PositionXPercent/Y) mit echten Koordinaten befüllen
-- Drag & Drop: Komponenten auf Slots ziehen, visuelle Verbindung
+- Drag & Drop: Komponenten auf Slots ziehen, SVGs werden layered/positioniert gerendert (nicht nur als Icon in einer Liste)
+- Rekursives Anbauen testen (z.B. Optik auf Rail auf Gewehr)
+- Colorway-Umschalter (Einfärben der Silhouetten per Fill, siehe Abschnitt 3) — beantwortet die "passt der Tan-Ton"-Frage, die der eigentliche Anlass für dieses Projekt war
 
 ### Langfristig
 - Share-Link-Page: Read-only View eines Loadouts per GUID
@@ -255,4 +273,4 @@ In dieser Reihenfolge geplant:
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-26 — Setup auf Zweit-PC verifiziert (Node.js 24 LTS, .NET SDK 10.0.302, dotnet-ef 10.0.10), NuGet-Sicherheitswarnungen NU1903 behoben.*
+*Zuletzt aktualisiert: 2026-07-26 — Kernvision geschärft: kein Warenkorb-Tool, sondern visuelle Kompatibilitäts-/Optik-Prüfung (Abschnitt 1 + 3 "Layered-Rendering-Konzept"). Loadout-Builder (Nebenfunktion) fertiggestellt. Setup auf Zweit-PC verifiziert (Node.js 24 LTS, .NET SDK 10.0.302, dotnet-ef 10.0.10), NuGet-Sicherheitswarnungen NU1903 behoben.*
