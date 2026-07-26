@@ -42,6 +42,7 @@ Ein webbasierter Konfigurator, mit dem Airsoft-Spieler ihre Ausrüstung (Loadout
 | SQLite → später PostgreSQL | SQLite reicht für Solo-Dev; EF Core macht DB-Wechsel auf Wunsch trivial |
 | Record-Types für DTOs | Immutable, kein Boilerplate, perfekt für Request/Response-Objekte |
 | Primary Constructors in Controllern | Modern C#, spart `private readonly`-Deklarationen |
+| Direkte Package-Pins für `Microsoft.OpenApi` (2.11.0) und `SQLitePCLRaw.bundle_e_sqlite3` (2.1.12) im `.csproj` | Beheben transitive Sicherheitswarnungen (NU1903 / GHSA-v5pm-xwqc-g5wc, GHSA-2m69-gcr7-jv3q), die über `Microsoft.AspNetCore.OpenApi` bzw. `Microsoft.EntityFrameworkCore.Sqlite` reinkamen. Bewusst nur Patch-Versionen innerhalb der bestehenden Major-Version gewählt (kein Sprung auf `Microsoft.OpenApi` 3.x oder `SQLitePCLRaw` 3.x), um Breaking Changes zu vermeiden |
 
 ### Frontend: React 19 + TypeScript + Vite
 
@@ -119,6 +120,7 @@ Loadout
 - [x] Loadout-Items: hinzufügen, entfernen, mit Kompatibilitätsprüfung (422 bei Mismatch)
 - [x] Share-Token: `GET /api/loadouts/share/{guid}` — öffentlicher Lesezugriff
 - [x] CORS konfiguriert für `http://localhost:5173`
+- [x] Bekannte NuGet-Sicherheitswarnungen (NU1903) behoben, siehe Tabelle in Abschnitt 2
 
 **Alle API-Routen:**
 ```
@@ -253,4 +255,4 @@ In dieser Reihenfolge geplant:
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-26*
+*Zuletzt aktualisiert: 2026-07-26 — Setup auf Zweit-PC verifiziert (Node.js 24 LTS, .NET SDK 10.0.302, dotnet-ef 10.0.10), NuGet-Sicherheitswarnungen NU1903 behoben.*
