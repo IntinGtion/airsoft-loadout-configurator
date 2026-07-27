@@ -98,13 +98,14 @@ export function CanvasView() {
       }
     }
 
-    if (!nearest || nearestDist > DROP_SNAP_DISTANCE) {
-      setError('No attachment slot near where you dropped that.')
-      return
-    }
+    // Not dropped near an existing slot — treat it as adding a new, independent
+    // item instead (e.g. the very first base component in an empty loadout, or a
+    // second unattached item next to it), same as the old "+" button in the list
+    // view already allowed.
+    const targetSlotId = nearest && nearestDist <= DROP_SNAP_DISTANCE ? nearest.id : null
 
     try {
-      await api.loadouts.addItem(loadoutId, componentId, nearest.id)
+      await api.loadouts.addItem(loadoutId, componentId, targetSlotId)
       reload()
     } catch (err) {
       setError(String(err))
@@ -125,7 +126,11 @@ export function CanvasView() {
         <header className={styles.header}>
           <div>
             <h1 className={styles.title}>{loadout?.name ?? 'Canvas'}</h1>
-            <p className={styles.subtitle}>Drag a component from the catalog onto a highlighted slot</p>
+            <p className={styles.subtitle}>
+              {rootItems.length === 0
+                ? 'Drag a base component (e.g. a plate carrier) onto the canvas to start'
+                : 'Drag a component from the catalog onto a highlighted slot'}
+            </p>
           </div>
           <Link className={styles.backLink} to={`/loadout/${loadoutId}`}>Back to list view</Link>
         </header>
@@ -150,11 +155,6 @@ export function CanvasView() {
 
         {loading ? (
           <div className={styles.loading}>Loading…</div>
-        ) : rootItems.length === 0 ? (
-          <div className={styles.empty}>
-            No base component in this loadout yet. Add one from the{' '}
-            <Link to={`/loadout/${loadoutId}`}>list view</Link> first.
-          </div>
         ) : (
           <div
             className={`${styles.stageWrap} ${dragOver ? styles.stageWrapDragOver : ''}`}
@@ -162,6 +162,12 @@ export function CanvasView() {
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
           >
+            {rootItems.length === 0 && (
+              <div className={styles.emptyHint}>
+                Drag a base component here, or add one from the{' '}
+                <Link to={`/loadout/${loadoutId}`}>list view</Link>
+              </div>
+            )}
             <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
               <Layer>
                 {rootItems.map((item, i) => {

@@ -84,6 +84,7 @@
 }
 
 .stageWrap {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -97,15 +98,29 @@
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-.loading,
-.empty {
+.emptyHint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.emptyHint a {
+  color: var(--accent);
+  pointer-events: auto;
+}
+
+.loading {
   color: var(--text-muted);
   font-size: 0.9rem;
   padding: 2rem 0;
-}
-
-.empty a {
-  color: var(--accent);
 }
 
 .error {
