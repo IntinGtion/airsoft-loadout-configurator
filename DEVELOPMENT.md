@@ -125,7 +125,7 @@ Stattdessen läuft das Matching über die neuen **diskreten Rasterkoordinaten** 
 6. Implementiert in `LoadoutsController.ComputeFootprint` / `ComputeOccupiedSlotIds` / `ValidateFootprint`, für `AddItem` und `MoveItem`
 7. Getestet über die API (Überlappung, Raster-Rand in beide Richtungen, nicht-überlappende Zweitplatzierung, Einzel-Slot-Komponenten)
 
-**Bewusst noch nicht gebaut:** Die Canvas-Oberfläche zeigt Footprint-Belegung visuell noch nicht an — belegte Nicht-Anker-Slots einer mehrpunktigen Komponente werden im Canvas noch als frei/klickbar dargestellt, ein Platzierungsversuch dort schlägt aber korrekt mit der 422-Fehlermeldung fehl (die im Frontend bereits angezeigt wird). Visuelles Vorab-Ausgrauen ist als Frontend-Polish für später vorgesehen, siehe Abschnitt 7.
+**Frontend-Spiegelung ✅ erledigt (2026-07-27):** Dieselbe Footprint-Berechnung läuft auch im Canvas (`frontend/src/components/canvas/footprint.ts`, `computeFootprintSlotIds` — bewusst dieselbe Grid-Logik wie serverseitig, keine eigene Wahrheit). `CanvasNode` markiert damit alle von einer platzierten Komponente belegten Slots (nicht nur den Anker) als ausgegraut und nicht klickbar (`SlotMarker`-Prop `occupied`), statt sie fälschlich als frei anzuzeigen. Mit Playwright verifiziert: Klick auf einen belegten Nicht-Anker-Slot öffnet den Picker nicht mehr.
 
 ### Layered-Rendering-Konzept für den Canvas-Konfigurator (geplant, siehe Abschnitt 7)
 
@@ -324,7 +324,7 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 ### Mittelfristig — Canvas-Konfigurator (**das ist die eigentliche Kernfunktion**, siehe Abschnitt 1 + 3 "Layered-Rendering-Konzept")
 - `react-konva` installiert, Grundgerüst mit Klick-zu-Platzieren steht ✅ erledigt (2026-07-27), siehe Abschnitt 4 "Frontend"
 - Server-seitige **Footprint-Match-Logik** ✅ erledigt (2026-07-27), siehe Abschnitt 3 "Footprint-Matching" — Grid-basiert (`GridColumn/GridRow`), bewusst ohne Toleranz-Problematik, da unabhängig vom Prozent-/Pixel-Rendering
-- **Canvas zeigt Footprint-Belegung noch nicht visuell an** (nur Anker-Slot wird als belegt erkannt, siehe Abschnitt 3) — Nachziehen, sobald Drag & Drop gebaut wird, damit man nicht erst beim Ablegen eine Fehlermeldung bekommt
+- **Footprint-Belegung visuell im Canvas** ✅ erledigt (2026-07-27) — belegte Nicht-Anker-Slots werden jetzt ausgegraut und sind nicht mehr klickbar, siehe Abschnitt 3
 - **Drag & Drop** statt Klick-zu-Platzieren: Komponenten aus einer Katalog-Liste auf freie Slots ziehen
 - Rekursion über mehr als 2 Ebenen testen (z.B. Optik auf Rail auf Gewehr) — bisher nur Plattenträger→Pouch verifiziert
 - Gemeinsamer Maßstab zwischen Assets verschiedener Figma-Dateien (aktuell rendert jede Kind-Komponente in fester Pixelgröße, siehe Abschnitt 4). Wichtig laut Projektinhaber: Positionen werden zwischen Assets nie exakt übereinstimmen, sobald das angegangen wird braucht das Matching/Rendering eine Toleranzschwelle — das Footprint-Matching selbst umgeht dieses Problem bereits über Rasterkoordinaten (Abschnitt 3), betrifft also nur noch das visuelle Rendering
@@ -339,4 +339,4 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-27 — Server-seitige Footprint-Match-Logik für mehrpunktige Komponenten (Abschnitt 3), grid-basiert statt prozent-/pixelbasiert, um der noch offenen Maßstabs-/Toleranz-Frage (Abschnitt 7) auszuweichen. Damit prüft der Server jetzt nicht nur Attachment-Typ, sondern auch ob wirklich genug zusammenhängender Platz frei ist — die "passt das überhaupt drauf"-Frage aus Abschnitt 1. Über die API verifiziert (Überlappung, Rasterrand, Mehrfachplatzierung). Offen: dasselbe visuell im Canvas anzeigen, Drag & Drop, gemeinsamer Asset-Maßstab.*
+*Zuletzt aktualisiert: 2026-07-27 — Footprint-Matching jetzt Ende-zu-Ende: server-seitige Validierung (Abschnitt 3, grid-basiert statt prozent-/pixelbasiert, umgeht die offene Maßstabs-/Toleranz-Frage aus Abschnitt 7) UND dieselbe Logik im Canvas gespiegelt, sodass belegte Slots einer mehrpunktigen Komponente (nicht nur der Anker) visuell ausgegraut und nicht klickbar sind. Damit beantwortet der Konfigurator jetzt wirklich die "passt das überhaupt drauf"-Frage aus Abschnitt 1, nicht nur auf Typ-Ebene. Offen: Drag & Drop, gemeinsamer Asset-Maßstab, weitere Assets.*

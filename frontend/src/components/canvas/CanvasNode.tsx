@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ComponentResponse, LoadoutItemResponse } from '../../api/types'
 import { ComponentSprite } from './ComponentSprite'
 import { SlotMarker } from './SlotMarker'
+import { computeFootprintSlotIds } from './footprint'
 
 export const CHILD_DISPLAY_WIDTH = 64
 
@@ -28,6 +29,22 @@ export function CanvasNode({
 }: Props) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const height = naturalSize ? width * (naturalSize.h / naturalSize.w) : null
+
+  // Slots consumed by a placed component's own footprint (e.g. the other 7 slots
+  // under a 2x4-MOLLE pouch), not just the one slot it's directly anchored to —
+  // these must render as occupied too, not as free/clickable markers.
+  const occupiedSlotIds = useMemo(() => {
+    const occupied = new Set<number>()
+    for (const slot of component.slots) {
+      const childItem = childItemsBySlotId.get(slot.id)
+      if (!childItem) continue
+      const childComponent = componentsById.get(childItem.componentId)
+      if (!childComponent) continue
+      const footprint = computeFootprintSlotIds(childComponent, slot, component.slots)
+      footprint?.forEach(id => occupied.add(id))
+    }
+    return occupied
+  }, [component, childItemsBySlotId, componentsById])
 
   return (
     <>
@@ -65,13 +82,15 @@ export function CanvasNode({
             )
           }
 
+          const isOccupied = occupiedSlotIds.has(slot.id)
           return (
             <SlotMarker
               key={slot.id}
               x={sx}
               y={sy}
+              occupied={isOccupied}
               selected={selectedSlotId === slot.id}
-              onClick={() => onSlotClick(slot.id, slot.attachmentTypeId)}
+              onClick={isOccupied ? undefined : () => onSlotClick(slot.id, slot.attachmentTypeId)}
             />
           )
         })}
