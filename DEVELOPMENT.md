@@ -162,6 +162,22 @@ PUT             /api/loadouts/{id}/items/{itemId}
 DELETE          /api/loadouts/{id}/items/{itemId}
 ```
 
+### Assets (erster echter Plattenträger)
+
+- [x] Erstes Figma-Asset: Plattenträger "Condor MOPC" mit 36 benannten MOLLE-Attachment-Points (`Slot{Spalte}_MOLLE_Row{Zeile}`, 6×6-Raster)
+- [x] Figma-API-Anbindung getestet (Token + File-Key in `.env`, nicht eingecheckt) — Datei ausgelesen, Artwork-Layer separat als SVG exportiert (Slot-Marker-Ellipsen bewusst ausgeschlossen, nur zur Koordinaten-Extraktion genutzt)
+- [x] Kombiniertes SVG unter `frontend/public/components/condor-mopc.svg` (Hauptsilhouette + MOLLE-Webbing-Layer, passgenau positioniert)
+- [x] `SeedData.cs`: Condor MOPC hat jetzt `SvgAssetPath` gesetzt und alle 36 echten Slot-Koordinaten (in % relativ zur Figma-Frame-BoundingBox) statt der bisherigen Platzhalter-Werte
+- [x] Visuell verifiziert (Silhouette + Slot-Punkte deckungsgleich)
+
+**Workflow für weitere Assets (Rezept):**
+1. Attachment-Points in Figma als eigene benannte Ellipsen/Frames auf der Silhouette platzieren (Namenskonvention wie oben)
+2. Datei per `GET /v1/files/{file_key}` abrufen, Node-IDs der Artwork-Layer und der Marker-Gruppe identifizieren
+3. Artwork-Layer einzeln per `GET /v1/images/{file_key}?ids=...&format=svg` exportieren, Marker-Gruppe NICHT mit-exportieren
+4. Layer-Offsets relativ zur Basis-Frame-BoundingBox berechnen, in ein kombiniertes SVG zusammensetzen
+5. Marker-Ellipsen-Zentren relativ zur Frame-BoundingBox in Prozent umrechnen → `Slot.PositionXPercent/Y`
+6. `SvgAssetPath` + Slots im `SeedData.cs` eintragen, DB-Dateien löschen und neu seeden lassen
+
 ### Frontend (Grundgerüst + Nebenfunktion "Loadout-Liste")
 
 - [x] Vite-Proxy: `/api/*` → `http://localhost:5154` (kein CORS-Problem im Dev)
@@ -252,7 +268,7 @@ Browser öffnen: **http://localhost:5173**
 
 ## 7. Nächste Schritte
 
-**Blocker für alles Weitere:** echte SVG-Silhouetten + echte Slot-Koordinaten von mindestens einer Basis-Komponente (z.B. ein Plattenträger) und einer anbaubaren Komponente (z.B. eine Tasche), damit wir das Zusammenspiel einmal end-to-end bauen können. Das schuldet der Projektinhaber noch (Inkscape/Figma-Arbeit), siehe Abschnitt 1 + 3.
+**Blocker für den Canvas-Konfigurator — teilweise erledigt (2026-07-27):** Erste Basis-Komponente (Condor MOPC) hat jetzt echtes SVG + 36 echte Slot-Koordinaten, siehe Abschnitt 4 "Assets". Es fehlt noch mindestens eine anbaubare Komponente (z.B. eine MOLLE-Tasche) mit eigenem Artwork, damit das Zusammenspiel (Tasche auf Plattenträger-Slot) end-to-end gebaut und getestet werden kann.
 
 ### Kurzfristig — Loadout-Builder Page ✅ erledigt (2026-07-26)
 War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Gesamtgewicht/-preis, Entfernen, Loadout-Switcher im Topbar. Details siehe Abschnitt 4.
@@ -273,4 +289,4 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-26 — Kernvision geschärft: kein Warenkorb-Tool, sondern visuelle Kompatibilitäts-/Optik-Prüfung (Abschnitt 1 + 3 "Layered-Rendering-Konzept"). Loadout-Builder (Nebenfunktion) fertiggestellt. Setup auf Zweit-PC verifiziert (Node.js 24 LTS, .NET SDK 10.0.302, dotnet-ef 10.0.10), NuGet-Sicherheitswarnungen NU1903 behoben.*
+*Zuletzt aktualisiert: 2026-07-27 — Erstes echtes Asset (Condor MOPC, 36 MOLLE-Slots) per Figma-API importiert und im Backend verankert, siehe Abschnitt 4 "Assets" für den wiederholbaren Workflow. Setup auf Dritt-PC verifiziert (Node.js 22.18.0, .NET SDK 10.0.302, dotnet-ef 10.0.10 neu installiert).*
