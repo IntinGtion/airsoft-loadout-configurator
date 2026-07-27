@@ -199,7 +199,12 @@ DELETE          /api/loadouts/{id}/items/{itemId}
 - [x] React-Router-DOM aktiviert: `/` → `ComponentBrowser`, `/loadout/:id` → `LoadoutBuilder`
 - [x] `LoadoutBuilder` — Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Items/Gesamtgewicht/-preis, Entfernen
 - [x] `LoadoutSwitcher` — Dropdown im Topbar, listet vorhandene Loadouts (sonst nach Verlassen der Seite nicht mehr auffindbar)
-- [ ] react-konva Canvas — **noch nicht installiert, das ist die eigentliche Kernfunktion (siehe Abschnitt 1 + 3), nicht die Liste oben**
+- [x] **Canvas-Grundgerüst** (`react-konva` + `konva` + `use-image` installiert) — neue Route `/loadout/:id/canvas` (`CanvasView`), siehe Abschnitt 1 + 3 für die Kernvision:
+  - Basis-Komponente (`parentSlotId === null`) wird als SVG-Sprite gerendert (`ComponentSprite`), ihre `Slot`s als klickbare Marker (`SlotMarker`) an den echten Prozent-Positionen
+  - Rekursion: bereits angehängte Kind-Items werden automatisch an der Pixel-Position ihres Parent-Slots gerendert und zeigen wiederum ihre eigenen Slots (`CanvasNode`, rekursiv) — funktioniert beliebig tief, ungetestet über 2 Ebenen hinaus
+  - Interaktion aktuell **Klick-zu-Platzieren** (freien Slot anklicken → Liste kompatibler Komponenten nach `AcceptedAttachmentTypes` → auswählen), noch **kein Drag & Drop** — das ist der nächste Schritt, siehe Abschnitt 7
+  - Kind-Komponenten werden aktuell in fester Pixelgröße gerendert (`CHILD_DISPLAY_WIDTH` in `CanvasNode.tsx`), da verschiedene Figma-Assets noch nicht auf einen gemeinsamen realen Maßstab bezogen sind
+  - End-to-end mit Playwright verifiziert: Condor MOPC platziert, Canvas geöffnet, MOLLE-Slot angeklickt, BFG Ten-Speed Pouch angehängt — rendert korrekt an der Slot-Position, keine Konsolenfehler
 
 ---
 
@@ -300,10 +305,11 @@ Browser öffnen: **http://localhost:5173**
 War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Gesamtgewicht/-preis, Entfernen, Loadout-Switcher im Topbar. Details siehe Abschnitt 4.
 
 ### Mittelfristig — Canvas-Konfigurator (**das ist die eigentliche Kernfunktion**, siehe Abschnitt 1 + 3 "Layered-Rendering-Konzept")
-- `react-konva` installieren
-- Drag & Drop: Komponenten auf Slots ziehen, SVGs werden layered/positioniert gerendert (nicht nur als Icon in einer Liste)
-- **Footprint-Match-Logik** (neu, ersetzt die bisherige reine Typ-Prüfung): beim Ablegen einer Komponente mit mehreren `MountPoints` (z.B. die 2×4-MOLLE-Pouch) prüfen, ob am Zielort genug zusammenhängende freie `Slot`s des Parents in der passenden relativen Anordnung UND mit passendem `AttachmentType` vorhanden sind — nicht nur ob irgendein einzelner Slot passt
-- Rekursives Anbauen testen (z.B. Optik auf Rail auf Gewehr)
+- `react-konva` installiert, Grundgerüst mit Klick-zu-Platzieren steht ✅ erledigt (2026-07-27), siehe Abschnitt 4 "Frontend"
+- **Drag & Drop** statt Klick-zu-Platzieren: Komponenten aus einer Katalog-Liste auf freie Slots ziehen
+- **Footprint-Match-Logik** (ersetzt die bisherige reine Typ-Prüfung): beim Ablegen einer Komponente mit mehreren `MountPoints` (z.B. die 2×4-MOLLE-Pouch) prüfen, ob am Zielort genug zusammenhängende freie `Slot`s des Parents in der passenden relativen Anordnung UND mit passendem `AttachmentType` vorhanden sind — nicht nur ob irgendein einzelner Slot passt
+- Rekursion über mehr als 2 Ebenen testen (z.B. Optik auf Rail auf Gewehr) — bisher nur Plattenträger→Pouch verifiziert
+- Gemeinsamer Maßstab zwischen Assets verschiedener Figma-Dateien (aktuell rendert jede Kind-Komponente in fester Pixelgröße, siehe Abschnitt 4)
 - Colorway-Umschalter (Einfärben der Silhouetten per Fill, siehe Abschnitt 3) — beantwortet die "passt der Tan-Ton"-Frage, die der eigentliche Anlass für dieses Projekt war
 - Restliche Seed-Komponenten (Gewehre, Optiken, andere Taschen) brauchen ebenfalls noch echte Assets nach demselben Workflow (Abschnitt 4)
 
@@ -315,4 +321,4 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-27 — Zweites echtes Asset (BFG Ten-Speed M4 Pouch, 8 MountPoints) per Figma-API importiert. Neue `MountPoint`-Entität eingeführt, um "eigene Andockpunkte einer Komponente" von "angebotenen Slots" zu unterscheiden (Abschnitt 3). Damit liegen jetzt Basis- UND anbaubare Komponente mit echten Assets vor — Blocker für den Canvas-Konfigurator ist aufgelöst, offen ist die Footprint-Match-Logik (Abschnitt 7). Setup auf Dritt-PC verifiziert (Node.js 22.18.0, .NET SDK 10.0.302, dotnet-ef 10.0.10 neu installiert).*
+*Zuletzt aktualisiert: 2026-07-27 — Canvas-Grundgerüst mit `react-konva` steht: Basis-Komponente + Slots + rekursiv gerenderte Kind-Komponenten, Klick-zu-Platzieren-Interaktion, end-to-end mit Playwright verifiziert (Abschnitt 4 "Frontend"). Damit ist die eigentliche Kernfunktion des Projekts (Abschnitt 1) erstmals sichtbar. Offen: Drag & Drop statt Klick, Footprint-Match-Logik, gemeinsamer Asset-Maßstab (Abschnitt 7). Setup auf Dritt-PC verifiziert (Node.js 22.18.0, .NET SDK 10.0.302, dotnet-ef 10.0.10 neu installiert).*
