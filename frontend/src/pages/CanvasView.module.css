@@ -183,6 +183,7 @@
   border-radius: 6px;
   color: var(--text-primary);
   cursor: grab;
+  user-select: none;
   transition: background 0.15s, border-color 0.15s;
 }
 
@@ -206,4 +207,19 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--accent);
+}
+
+.dragGhost {
+  position: fixed;
+  transform: translate(12px, 12px);
+  background: var(--surface-hover);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }

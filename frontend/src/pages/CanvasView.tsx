@@ -15,6 +15,11 @@ const STAGE_HEIGHT = 720
 const ROOT_DISPLAY_WIDTH_FALLBACK = 380
 const DROP_SNAP_DISTANCE = 26
 
+interface DraggingItem {
+  componentId: number
+  name: string
+}
+
 export function CanvasView() {
   const { id } = useParams<{ id: string }>()
   const loadoutId = Number(id)
@@ -24,8 +29,18 @@ export function CanvasView() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState(false)
   const [colorway, setColorway] = useState<string | null>(null)
+
+  // Native HTML5 drag-and-drop (draggable/dragstart/dragover/drop) turned out to be
+  // unreliable in real browsers when the drop target contains a <canvas> (Konva's
+  // Stage) — it worked under Playwright's synthetic drag simulation but not for an
+  // actual mouse drag, per the project owner's manual testing on 2026-07-27. Plain
+  // mouse events (mousedown/mousemove/mouseup) don't have that class of bug and are
+  // consistent across browsers, so dragging is implemented by hand instead.
+  const [dragging, setDragging] = useState<DraggingItem | null>(null)
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const stageWrapRef = useRef<HTMLDivElement | null>(null)
 
   const { categories, components: catalog, selected, setSelected } = useComponents()
 
@@ -33,12 +48,6 @@ export function CanvasView() {
   // updated by CanvasNode as it computes layout, read once at drop time to find the
   // nearest free slot under the cursor.
   const slotPositions = useRef(new Map<number, DropCandidate>())
-
-  // The native HTML5 'drop' event's own clientX/clientY isn't reliable across
-  // browsers (some report stale or zeroed-out coordinates on drop). 'dragover'
-  // fires continuously and reliably throughout the drag, so track the latest
-  // pointer position there and use that instead of trusting the drop event.
-  const lastDragClientPos = useRef<{ x: number; y: number } | null>(null)
 
   const handleSlotsComputed = useCallback((slots: DropCandidate[]) => {
     slots.forEach(s => slotPositions.current.set(s.id, s))
@@ -76,24 +85,8 @@ export function CanvasView() {
     return map
   }, [loadout])
 
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault()
-    setDragOver(true)
-    lastDragClientPos.current = { x: e.clientX, y: e.clientY }
-  }
-
-  async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    setDragOver(false)
+  const placeComponent = useCallback(async (componentId: number, dropX: number, dropY: number) => {
     setError(null)
-
-    const componentId = Number(e.dataTransfer.getData('text/component-id'))
-    if (!componentId) return
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const clientPos = lastDragClientPos.current ?? { x: e.clientX, y: e.clientY }
-    const dropX = clientPos.x - rect.left
-    const dropY = clientPos.y - rect.top
 
     let nearest: DropCandidate | null = null
     let nearestDist = Infinity
@@ -129,7 +122,48 @@ export function CanvasView() {
     }
 
     setError('No attachment slot near where you dropped that.')
+  }, [loadoutId, reload, rootItems.length])
+
+  function startDrag(item: DraggingItem, e: React.MouseEvent) {
+    e.preventDefault()
+    setDragging(item)
+    setDragPos({ x: e.clientX, y: e.clientY })
   }
+
+  useEffect(() => {
+    if (!dragging) return
+
+    function isOverStage(clientX: number, clientY: number) {
+      const rect = stageWrapRef.current?.getBoundingClientRect()
+      if (!rect) return false
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+    }
+
+    function handleMove(e: MouseEvent) {
+      setDragPos({ x: e.clientX, y: e.clientY })
+      setDragOver(isOverStage(e.clientX, e.clientY))
+    }
+
+    function handleUp(e: MouseEvent) {
+      const rect = stageWrapRef.current?.getBoundingClientRect()
+      const dropInStage = rect && isOverStage(e.clientX, e.clientY)
+
+      setDragging(null)
+      setDragPos(null)
+      setDragOver(false)
+
+      if (dropInStage && rect && dragging) {
+        placeComponent(dragging.componentId, e.clientX - rect.left, e.clientY - rect.top)
+      }
+    }
+
+    window.addEventListener('mousemove', handleMove)
+    window.addEventListener('mouseup', handleUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMove)
+      window.removeEventListener('mouseup', handleUp)
+    }
+  }, [dragging, placeComponent])
 
   if (notFound) {
     return (
@@ -176,10 +210,8 @@ export function CanvasView() {
           <div className={styles.loading}>Loading…</div>
         ) : (
           <div
+            ref={stageWrapRef}
             className={`${styles.stageWrap} ${dragOver ? styles.stageWrapDragOver : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
           >
             {rootItems.length === 0 && (
               <div className={styles.emptyHint}>
@@ -222,8 +254,7 @@ export function CanvasView() {
               <li key={c.id}>
                 <div
                   className={styles.catalogItem}
-                  draggable
-                  onDragStart={e => e.dataTransfer.setData('text/component-id', String(c.id))}
+                  onMouseDown={e => startDrag({ componentId: c.id, name: c.name }, e)}
                 >
                   <span className={styles.catalogItemName}>{c.name}</span>
                   <span className={styles.catalogItemCategory}>{c.categoryName}</span>
@@ -233,6 +264,15 @@ export function CanvasView() {
           </ul>
         </div>
       </aside>
+
+      {dragging && dragPos && (
+        <div
+          className={styles.dragGhost}
+          style={{ left: dragPos.x, top: dragPos.y }}
+        >
+          {dragging.name}
+        </div>
+      )}
     </div>
   )
 }
