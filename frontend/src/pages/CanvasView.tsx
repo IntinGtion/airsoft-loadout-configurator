@@ -74,8 +74,15 @@ export function CanvasView() {
     slots.forEach(s => slotPositions.current.set(s.id, s))
   }, [])
 
+  // Only the very first load shows the "Loading…" placeholder (which unmounts the
+  // whole Stage). Reloads after adding/moving/deleting an item keep the canvas and
+  // sidebar mounted throughout — the old state stays on screen until the fresh data
+  // arrives, then React just updates the existing tree instead of a blank flash
+  // followed by everything (including already-loaded images) starting over.
+  const hasLoadedOnce = useRef(false)
+
   const reload = useCallback(() => {
-    setLoading(true)
+    if (!hasLoadedOnce.current) setLoading(true)
     api.loadouts.getById(loadoutId)
       .then(async l => {
         setLoadout(l)
@@ -86,7 +93,10 @@ export function CanvasView() {
         setComponentsById(new Map(fetched.map(c => [c.id, c])))
       })
       .catch(() => setNotFound(true))
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        hasLoadedOnce.current = true
+      })
   }, [loadoutId])
 
   useEffect(() => {
