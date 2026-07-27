@@ -135,9 +135,9 @@ So soll die eigentliche Kernfunktion (siehe Abschnitt 1) technisch funktionieren
 2. Ihre `Slot`-Punkte (`PositionXPercent/Y`) markieren Anbaustellen auf dieser Silhouette.
 3. Zieht man eine kompatible Komponente auf einen Slot, wird deren SVG passgenau an dieser Position eingeblendet — nicht als Icon in einer Liste, sondern als echtes zusammengesetztes Bild.
 4. Das ist **rekursiv**: `LoadoutItem.ParentSlotId` verweist auf einen Slot, egal wie tief verschachtelt — eine Tasche kann selbst wieder eigene Slots haben (z.B. für einen Patch), eine Rail selbst wieder für eine Optik.
-5. Die bereits vorhandene 422-Kompatibilitätsprüfung (Typ-Ebene) verhindert grob falsche Kombinationen. Zusätzlich noch zu bauen (siehe Abschnitt 7): eine **Footprint-Prüfung**, die `Component.MountPoints` (die eigenen Andockpunkte, z.B. 2×4 MOLLE-Straps einer Tasche) gegen freie `Slot`s des Parents abgleicht — nur wenn genug zusammenhängende, passende Slots frei sind, darf die Komponente dort abgelegt werden.
+5. Die 422-Kompatibilitätsprüfung (Typ-Ebene) UND die **Footprint-Prüfung** (Geometrie-Ebene, `Component.MountPoints` gegen zusammenhängende freie `Slot`s des Parents) sind beide ✅ erledigt (2026-07-27), siehe Abschnitt 3 "Footprint-Matching" und Abschnitt 4 "Frontend".
 
-**Colorway-Idee (noch nicht umgesetzt, keine Datenmodell-Änderung bisher):** Statt jede Komponente in jeder Farbe einzeln zu zeichnen, sollten die SVGs als einfarbige Silhouetten angelegt werden, die sich per CSS/SVG-Fill einfärben lassen. Damit ließe sich ein globaler Colorway-Umschalter bauen (Multicam, Ranger Green, Coyote Tan, Black, ...), der das komplette zusammengebaute Loadout in Echtzeit umfärbt — beantwortet direkt die Frage "passt der Tan-Ton zur restlichen Ausrüstung", ohne dass für jede Farbkombination eigenes Artwork nötig wäre.
+**Colorway-Umschalter ✅ erledigt (2026-07-27):** Jede Komponente ist als einfarbige Silhouette angelegt (ein einziger `fill`-Hex-Wert für den Körper, siehe `frontend/public/components/*.svg`). Da Konva SVGs als rasterisierte Bitmaps zeichnet (`use-image`), lässt sich die Farbe nicht nachträglich per CSS/Filter auf dem fertigen Bild ändern — stattdessen holt `frontend/src/components/canvas/recolorSvg.ts` den SVG-Quelltext, ersetzt den `fill`-Wert per Text-Replace und lädt das Ergebnis als neuen Blob. `ComponentSprite` bekommt dafür einen `colorway`-Prop, der rekursiv durch `CanvasNode` durchgereicht wird, sodass ein einziger globaler Umschalter (`CanvasView`, Palette in `colorways.ts`: Ranger Green, Coyote Tan, Black, Original) das komplette zusammengebaute Loadout auf einmal umfärbt — beantwortet direkt die "passt der Tan-Ton"-Frage aus Abschnitt 1. Eine echte Multicam-Option (Muster statt Vollfarbe) geht mit diesem Text-Replace-Ansatz nicht, nur solide Farben. Mit Playwright verifiziert (alle 3 Farben + zurück zu Original, beide platzierten Komponenten färben synchron um).
 
 ### Seed-Daten (16 Produkte)
 
@@ -329,10 +329,11 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 - Server-seitige **Footprint-Match-Logik** ✅ erledigt (2026-07-27), siehe Abschnitt 3 "Footprint-Matching" — Grid-basiert (`GridColumn/GridRow`), bewusst ohne Toleranz-Problematik, da unabhängig vom Prozent-/Pixel-Rendering
 - **Footprint-Belegung visuell im Canvas** ✅ erledigt (2026-07-27) — belegte Nicht-Anker-Slots werden jetzt ausgegraut, siehe Abschnitt 3
 - **Drag & Drop** ✅ erledigt (2026-07-27) — Klick-zu-Platzieren abgelöst, siehe Abschnitt 4 "Frontend"
+- **Colorway-Umschalter** ✅ erledigt (2026-07-27), siehe Abschnitt 3 — nur solide Farben, kein Multicam-Muster (siehe dort)
 - Live-Hervorhebung des nächstgelegenen Drop-Ziels **während** des Ziehens (aktuell nur Rahmen-Highlight auf der ganzen Stage, kein Slot-genaues Feedback vor dem Loslassen)
 - Rekursion über mehr als 2 Ebenen testen (z.B. Optik auf Rail auf Gewehr) — bisher nur Plattenträger→Pouch verifiziert
 - Gemeinsamer Maßstab zwischen Assets verschiedener Figma-Dateien (aktuell rendert jede Kind-Komponente in fester Pixelgröße, siehe Abschnitt 4). Wichtig laut Projektinhaber: Positionen werden zwischen Assets nie exakt übereinstimmen, sobald das angegangen wird braucht das Matching/Rendering eine Toleranzschwelle — das Footprint-Matching selbst umgeht dieses Problem bereits über Rasterkoordinaten (Abschnitt 3), betrifft also nur noch das visuelle Rendering
-- Colorway-Umschalter (Einfärben der Silhouetten per Fill, siehe Abschnitt 3) — beantwortet die "passt der Tan-Ton"-Frage, die der eigentliche Anlass für dieses Projekt war
+- Multicam-/Muster-Colorways (aktueller Ansatz kann nur solide Farben, siehe Abschnitt 3)
 - Restliche Seed-Komponenten (Gewehre, Optiken, andere Taschen) brauchen ebenfalls noch echte Assets nach demselben Workflow (Abschnitt 4)
 
 ### Langfristig
@@ -343,4 +344,4 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-27 — Drag & Drop im Canvas: Klick-zu-Platzieren durch ein persistentes Katalog-Panel (Kategoriefilter + ziehbare Karten) ersetzt, das per nächstgelegener freier Slot-Position andockt. Damit sind Footprint-Matching (server-seitig + visuell) und Drag & Drop beide fertig — der Canvas-Konfigurator fühlt sich jetzt wie das eigentliche Produkt aus Abschnitt 1 an, nicht mehr wie ein Grundgerüst. Offen: Live-Hervorhebung des Drop-Ziels während des Ziehens, gemeinsamer Asset-Maßstab, weitere Assets/Kategorien.*
+*Zuletzt aktualisiert: 2026-07-27 — Colorway-Umschalter im Canvas: globale Farbauswahl (Ranger Green/Coyote Tan/Black/Original) färbt alle platzierten Komponenten synchron um, per SVG-Text-Replace vor dem Laden als Konva-Bitmap (`recolorSvg.ts`), da nachträgliches Umfärben eines bereits rasterisierten Bilds nicht geht. Beantwortet direkt die "passt der Tan-Ton"-Frage aus Abschnitt 1 — damit sind Footprint-Matching, Drag & Drop und Colorway alle drei fertig, der Canvas-Konfigurator deckt jetzt die komplette in Abschnitt 1 beschriebene Kernvision ab (nur mit den bisher zwei echten Assets). Offen: Live-Drop-Highlighting, gemeinsamer Asset-Maßstab, Multicam-Muster, weitere Assets/Kategorien.*

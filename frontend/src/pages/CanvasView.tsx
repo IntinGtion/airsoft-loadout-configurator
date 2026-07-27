@@ -6,6 +6,7 @@ import type { ComponentResponse, LoadoutItemResponse, LoadoutResponse } from '..
 import { useComponents } from '../hooks/useComponents'
 import { CategoryNav } from '../components/CategoryNav'
 import { CanvasNode, type DropCandidate } from '../components/canvas/CanvasNode'
+import { COLORWAYS } from '../components/canvas/colorways'
 import styles from './CanvasView.module.css'
 
 const STAGE_WIDTH = 640
@@ -23,6 +24,7 @@ export function CanvasView() {
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [colorway, setColorway] = useState<string | null>(null)
 
   const { categories, components: catalog, selected, setSelected } = useComponents()
 
@@ -127,6 +129,22 @@ export function CanvasView() {
           <Link className={styles.backLink} to={`/loadout/${loadoutId}`}>Back to list view</Link>
         </header>
 
+        <div className={styles.colorwayRow}>
+          <span className={styles.colorwayLabel}>Colorway</span>
+          {COLORWAYS.map(cw => (
+            <button
+              key={cw.name}
+              type="button"
+              className={`${styles.colorwaySwatch} ${colorway === cw.hex ? styles.colorwaySwatchActive : ''}`}
+              style={cw.hex ? { background: cw.hex } : undefined}
+              title={cw.name}
+              onClick={() => setColorway(cw.hex)}
+            >
+              {!cw.hex && '?'}
+            </button>
+          ))}
+        </div>
+
         {error && <p className={styles.error}>{error}</p>}
 
         {loading ? (
@@ -158,6 +176,7 @@ export function CanvasView() {
                       componentsById={componentsById}
                       childItemsBySlotId={childItemsBySlotId}
                       onSlotsComputed={handleSlotsComputed}
+                      colorway={colorway}
                     />
                   )
                 })}

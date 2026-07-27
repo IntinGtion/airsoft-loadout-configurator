@@ -22,6 +22,7 @@ interface Props {
   componentsById: Map<number, ComponentResponse>
   childItemsBySlotId: Map<number, LoadoutItemResponse>
   onSlotsComputed: (slots: DropCandidate[]) => void
+  colorway: string | null
 }
 
 export function CanvasNode({
@@ -32,6 +33,7 @@ export function CanvasNode({
   componentsById,
   childItemsBySlotId,
   onSlotsComputed,
+  colorway,
 }: Props) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const height = naturalSize ? width * (naturalSize.h / naturalSize.w) : null
@@ -74,6 +76,7 @@ export function CanvasNode({
           x={x}
           y={y}
           width={width}
+          colorway={colorway}
           onLoad={(nw, nh) => setNaturalSize({ w: nw, h: nh })}
         />
       )}
@@ -97,6 +100,7 @@ export function CanvasNode({
                 componentsById={componentsById}
                 childItemsBySlotId={childItemsBySlotId}
                 onSlotsComputed={onSlotsComputed}
+                colorway={colorway}
               />
             )
           }

@@ -46,6 +46,43 @@
   text-decoration: underline;
 }
 
+.colorwayRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.colorwayLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+
+.colorwaySwatch {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.colorwaySwatch:hover {
+  border-color: var(--border-hover);
+}
+
+.colorwaySwatchActive {
+  border-color: var(--accent);
+  transform: scale(1.1);
+}
+
 .stageWrap {
   background: var(--surface);
   border: 1px solid var(--border);
