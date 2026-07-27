@@ -88,9 +88,14 @@ backend/ (ASP.NET Core)
 ```
 Category         (plate-carrier, rifle, optic, pistol, pouch)
     └── Component    (z.B. "Crye JPC 2.0", "TM MWS GBBR")
-          ├── Slot[]               Befestigungspunkte (mit X/Y-Position in %)
+          ├── Slot[]               Befestigungspunkte, die DIESE Komponente ANBIETET (X/Y-Position in %)
           │     └── AttachmentType  (molle, picatinny, gbb-mag-well, ...)
-          └── AcceptedAttachmentTypes[]  (n:m — welche Slot-Typen akzeptiert diese Komponente)
+          ├── MountPoint[]         eigene Andockpunkte, mit denen DIESE Komponente SICH SELBST an einem
+          │     └── AttachmentType  Slot einer anderen Komponente befestigt (X/Y-Position in %, relativ
+          │                         zur eigenen Silhouette) — z.B. die MOLLE-Straps auf der Rückseite
+          │                         einer Tasche
+          └── AcceptedAttachmentTypes[]  (n:m — welche Slot-Typen akzeptiert diese Komponente; schnelle
+                                          Typ-Prüfung ohne Positionsdaten, siehe 422-Check unten)
 
 Loadout
     └── LoadoutItem[]
@@ -99,10 +104,11 @@ Loadout
 ```
 
 **Wichtige Designentscheidungen:**
-- `Slot` gehört einer `Component` und hat einen `AttachmentType` (z.B. Picatinny)
-- `Component.AcceptedAttachmentTypes` sagt, an welchen Slot-Typen die Komponente befestigt werden kann
-- Beim Hinzufügen zu einem Loadout prüft der Server: passt `Component.AcceptedAttachmentTypes` zu `Slot.AttachmentTypeId`? Wenn nicht → 422 Unprocessable Entity
-- `Slot.PositionXPercent/YPercent` sind geometrische Platzhalter (0–100); exakte Koordinaten kommen später aus Figma/Inkscape
+- `Slot` gehört einer `Component` und hat einen `AttachmentType` (z.B. Picatinny) — das ist die Anbieter-Seite ("was kann an mir befestigt werden")
+- `MountPoint` gehört ebenfalls einer `Component`, ist aber die Empfänger-Seite ("wie/wo befestige ich mich an meinem Parent") — z.B. hat eine MOLLE-Tasche mehrere eigene MountPoints für ihre Straps, unabhängig von etwaigen eigenen `Slot`s, die sie selbst wieder anbietet (z.B. für ein Patch)
+- `Component.AcceptedAttachmentTypes` sagt, an welchen Slot-Typen die Komponente grundsätzlich befestigt werden kann (Typ-Ebene)
+- Beim Hinzufügen zu einem Loadout prüft der Server aktuell: passt `Component.AcceptedAttachmentTypes` zu `Slot.AttachmentTypeId`? Wenn nicht → 422 Unprocessable Entity. Das ist nur die Typ-Prüfung — die geometrische Footprint-Prüfung (passen alle `MountPoint`s der Komponente auf freie `Slot`s des Parents?) ist noch nicht gebaut, siehe Abschnitt 7
+- `Slot.PositionXPercent/YPercent` und `MountPoint.PositionXPercent/YPercent` sind für die ersten beiden Assets (Condor MOPC, BFG Ten-Speed) bereits echte, aus Figma exportierte Koordinaten (siehe Abschnitt 4 "Assets"); bei allen anderen Seed-Komponenten weiterhin Platzhalter
 
 ### Layered-Rendering-Konzept für den Canvas-Konfigurator (geplant, siehe Abschnitt 7)
 
@@ -111,8 +117,8 @@ So soll die eigentliche Kernfunktion (siehe Abschnitt 1) technisch funktionieren
 1. Eine Basis-Komponente (z.B. Plattenträger, Gewehr) wird als SVG auf die Canvas gelegt.
 2. Ihre `Slot`-Punkte (`PositionXPercent/Y`) markieren Anbaustellen auf dieser Silhouette.
 3. Zieht man eine kompatible Komponente auf einen Slot, wird deren SVG passgenau an dieser Position eingeblendet — nicht als Icon in einer Liste, sondern als echtes zusammengesetztes Bild.
-4. Das ist **rekursiv**: `LoadoutItem.ParentSlotId` verweist auf einen Slot, egal wie tief verschachtelt — eine Tasche kann selbst wieder eigene Slots haben (z.B. für einen Patch), eine Rail selbst wieder für eine Optik. Das Datenmodell trägt das bereits, ohne Änderung.
-5. Die bereits vorhandene 422-Kompatibilitätsprüfung verhindert dann auch visuell falsche Kombinationen direkt beim Draufziehen.
+4. Das ist **rekursiv**: `LoadoutItem.ParentSlotId` verweist auf einen Slot, egal wie tief verschachtelt — eine Tasche kann selbst wieder eigene Slots haben (z.B. für einen Patch), eine Rail selbst wieder für eine Optik.
+5. Die bereits vorhandene 422-Kompatibilitätsprüfung (Typ-Ebene) verhindert grob falsche Kombinationen. Zusätzlich noch zu bauen (siehe Abschnitt 7): eine **Footprint-Prüfung**, die `Component.MountPoints` (die eigenen Andockpunkte, z.B. 2×4 MOLLE-Straps einer Tasche) gegen freie `Slot`s des Parents abgleicht — nur wenn genug zusammenhängende, passende Slots frei sind, darf die Komponente dort abgelegt werden.
 
 **Colorway-Idee (noch nicht umgesetzt, keine Datenmodell-Änderung bisher):** Statt jede Komponente in jeder Farbe einzeln zu zeichnen, sollten die SVGs als einfarbige Silhouetten angelegt werden, die sich per CSS/SVG-Fill einfärben lassen. Damit ließe sich ein globaler Colorway-Umschalter bauen (Multicam, Ranger Green, Coyote Tan, Black, ...), der das komplette zusammengebaute Loadout in Echtzeit umfärbt — beantwortet direkt die Frage "passt der Tan-Ton zur restlichen Ausrüstung", ohne dass für jede Farbkombination eigenes Artwork nötig wäre.
 
@@ -169,14 +175,17 @@ DELETE          /api/loadouts/{id}/items/{itemId}
 - [x] Kombiniertes SVG unter `frontend/public/components/condor-mopc.svg` (Hauptsilhouette + MOLLE-Webbing-Layer, passgenau positioniert)
 - [x] `SeedData.cs`: Condor MOPC hat jetzt `SvgAssetPath` gesetzt und alle 36 echten Slot-Koordinaten (in % relativ zur Figma-Frame-BoundingBox) statt der bisherigen Platzhalter-Werte
 - [x] Visuell verifiziert (Silhouette + Slot-Punkte deckungsgleich)
+- [x] Zweites Asset: "BFG Ten-Speed M4 Pouch" aus eigener Figma-Datei "M4 Pouch MVP" (eigener File-Key) — hat KEINE eigenen `Slot`s, sondern 8 `MountPoint`s (2×4 MOLLE-Straps, mit denen sie sich selbst am Plattenträger befestigt); dafür wurde die neue `MountPoint`-Entität eingeführt (Model, Migration `AddMountPoints`, DTO, Controller, Frontend-Types), siehe Abschnitt 3 für die Modellierung
+- [x] SVG unter `frontend/public/components/bfg-tenspeed.svg`, visuell verifiziert
 
 **Workflow für weitere Assets (Rezept):**
 1. Attachment-Points in Figma als eigene benannte Ellipsen/Frames auf der Silhouette platzieren (Namenskonvention wie oben)
-2. Datei per `GET /v1/files/{file_key}` abrufen, Node-IDs der Artwork-Layer und der Marker-Gruppe identifizieren
-3. Artwork-Layer einzeln per `GET /v1/images/{file_key}?ids=...&format=svg` exportieren, Marker-Gruppe NICHT mit-exportieren
-4. Layer-Offsets relativ zur Basis-Frame-BoundingBox berechnen, in ein kombiniertes SVG zusammensetzen
-5. Marker-Ellipsen-Zentren relativ zur Frame-BoundingBox in Prozent umrechnen → `Slot.PositionXPercent/Y`
-6. `SvgAssetPath` + Slots im `SeedData.cs` eintragen, DB-Dateien löschen und neu seeden lassen
+2. Vorab klären: bietet die Komponente diese Punkte an (→ `Slot`, z.B. Plattenträger, Rail) oder befestigt sie sich selbst damit an einem Parent (→ `MountPoint`, z.B. Tasche, Optik)? Beides kann auch gleichzeitig vorkommen (z.B. eine Rail hat MountPoints zum Gewehr UND eigene Slots für eine Optik)
+3. Datei per `GET /v1/files/{file_key}` abrufen, Node-IDs der Artwork-Layer und der Marker-Gruppe identifizieren
+4. Artwork-Layer einzeln per `GET /v1/images/{file_key}?ids=...&format=svg` exportieren, Marker-Gruppe NICHT mit-exportieren
+5. Layer-Offsets relativ zur Basis-Frame-BoundingBox berechnen, in ein kombiniertes SVG zusammensetzen
+6. Marker-Ellipsen-Zentren relativ zur Frame-BoundingBox in Prozent umrechnen → `Slot.PositionXPercent/Y` bzw. `MountPoint.PositionXPercent/Y`
+7. `SvgAssetPath` + Slots/MountPoints im `SeedData.cs` eintragen, DB-Dateien löschen und neu seeden lassen
 
 ### Frontend (Grundgerüst + Nebenfunktion "Loadout-Liste")
 
@@ -285,18 +294,18 @@ Browser öffnen: **http://localhost:5173**
 
 ## 7. Nächste Schritte
 
-**Blocker für den Canvas-Konfigurator — teilweise erledigt (2026-07-27):** Erste Basis-Komponente (Condor MOPC) hat jetzt echtes SVG + 36 echte Slot-Koordinaten, siehe Abschnitt 4 "Assets". Es fehlt noch mindestens eine anbaubare Komponente (z.B. eine MOLLE-Tasche) mit eigenem Artwork, damit das Zusammenspiel (Tasche auf Plattenträger-Slot) end-to-end gebaut und getestet werden kann.
+**Blocker für den Canvas-Konfigurator — erledigt (2026-07-27):** Basis-Komponente (Condor MOPC, echtes SVG + 36 echte Slots) UND anbaubare Komponente (BFG Ten-Speed Pouch, echtes SVG + 8 echte MountPoints) liegen jetzt vor, siehe Abschnitt 4 "Assets". Datenmodell dafür erweitert (`MountPoint`, siehe Abschnitt 3). Offen ist jetzt die eigentliche Canvas-Implementierung und die Footprint-Match-Logik (siehe unten).
 
 ### Kurzfristig — Loadout-Builder Page ✅ erledigt (2026-07-26)
 War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Gesamtgewicht/-preis, Entfernen, Loadout-Switcher im Topbar. Details siehe Abschnitt 4.
 
 ### Mittelfristig — Canvas-Konfigurator (**das ist die eigentliche Kernfunktion**, siehe Abschnitt 1 + 3 "Layered-Rendering-Konzept")
 - `react-konva` installieren
-- SVG-Silhouetten für mindestens eine Basis-Komponente (Plattenträger) + eine anbaubare Komponente erstellen (Inkscape/Figma) — **wartet auf Assets vom Projektinhaber**
-- Slot-Positionen (PositionXPercent/Y) mit echten Koordinaten befüllen
 - Drag & Drop: Komponenten auf Slots ziehen, SVGs werden layered/positioniert gerendert (nicht nur als Icon in einer Liste)
+- **Footprint-Match-Logik** (neu, ersetzt die bisherige reine Typ-Prüfung): beim Ablegen einer Komponente mit mehreren `MountPoints` (z.B. die 2×4-MOLLE-Pouch) prüfen, ob am Zielort genug zusammenhängende freie `Slot`s des Parents in der passenden relativen Anordnung UND mit passendem `AttachmentType` vorhanden sind — nicht nur ob irgendein einzelner Slot passt
 - Rekursives Anbauen testen (z.B. Optik auf Rail auf Gewehr)
 - Colorway-Umschalter (Einfärben der Silhouetten per Fill, siehe Abschnitt 3) — beantwortet die "passt der Tan-Ton"-Frage, die der eigentliche Anlass für dieses Projekt war
+- Restliche Seed-Komponenten (Gewehre, Optiken, andere Taschen) brauchen ebenfalls noch echte Assets nach demselben Workflow (Abschnitt 4)
 
 ### Langfristig
 - Share-Link-Page: Read-only View eines Loadouts per GUID
@@ -306,4 +315,4 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-27 — Erstes echtes Asset (Condor MOPC, 36 MOLLE-Slots) per Figma-API importiert und im Backend verankert, siehe Abschnitt 4 "Assets" für den wiederholbaren Workflow. Setup auf Dritt-PC verifiziert (Node.js 22.18.0, .NET SDK 10.0.302, dotnet-ef 10.0.10 neu installiert).*
+*Zuletzt aktualisiert: 2026-07-27 — Zweites echtes Asset (BFG Ten-Speed M4 Pouch, 8 MountPoints) per Figma-API importiert. Neue `MountPoint`-Entität eingeführt, um "eigene Andockpunkte einer Komponente" von "angebotenen Slots" zu unterscheiden (Abschnitt 3). Damit liegen jetzt Basis- UND anbaubare Komponente mit echten Assets vor — Blocker für den Canvas-Konfigurator ist aufgelöst, offen ist die Footprint-Match-Logik (Abschnitt 7). Setup auf Dritt-PC verifiziert (Node.js 22.18.0, .NET SDK 10.0.302, dotnet-ef 10.0.10 neu installiert).*

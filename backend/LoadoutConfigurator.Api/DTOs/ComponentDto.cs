@@ -20,10 +20,20 @@ public record ComponentResponse(
     decimal? PriceEur,
     string? SvgAssetPath,
     List<SlotResponse> Slots,
-    List<AttachmentTypeResponse> AcceptedAttachmentTypes
+    List<AttachmentTypeResponse> AcceptedAttachmentTypes,
+    List<MountPointResponse> MountPoints
 );
 
 public record SlotResponse(
+    int Id,
+    int AttachmentTypeId,
+    string AttachmentTypeName,
+    string Label,
+    float PositionXPercent,
+    float PositionYPercent
+);
+
+public record MountPointResponse(
     int Id,
     int AttachmentTypeId,
     string AttachmentTypeName,

@@ -265,7 +265,21 @@ public static class SeedData
             Manufacturer = "Blue Force Gear",
             WeightGrams = 120,
             PriceEur = 64,
-            AcceptedAttachmentTypes = [molle]
+            SvgAssetPath = "/components/bfg-tenspeed.svg",
+            AcceptedAttachmentTypes = [molle],
+            // MountPoints aus Figma-Datei "M4 Pouch MVP" (Frame M4Pouch_MOPC_Front): eigene
+            // MOLLE-Straps auf der Rückseite, mit denen die Pouch am Plattenträger andockt.
+            MountPoints =
+            [
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-1", PositionXPercent = 27.05f, PositionYPercent = 14.02f },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-2", PositionXPercent = 27.82f, PositionYPercent = 31.8f },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-3", PositionXPercent = 27.05f, PositionYPercent = 50.04f },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-4", PositionXPercent = 27.05f, PositionYPercent = 67.82f },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-1", PositionXPercent = 72.44f, PositionYPercent = 14.02f },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-2", PositionXPercent = 72.44f, PositionYPercent = 31.8f },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-3", PositionXPercent = 72.44f, PositionYPercent = 50.04f },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-4", PositionXPercent = 72.44f, PositionYPercent = 67.97f },
+            ]
         };
 
         var ifak = new Component

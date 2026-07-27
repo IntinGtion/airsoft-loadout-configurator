@@ -17,6 +17,7 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             .Include(c => c.Category)
             .Include(c => c.Slots).ThenInclude(s => s.AttachmentType)
             .Include(c => c.AcceptedAttachmentTypes)
+            .Include(c => c.MountPoints).ThenInclude(m => m.AttachmentType)
             .AsQueryable();
 
         if (categoryId.HasValue)
@@ -33,6 +34,7 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             .Include(c => c.Category)
             .Include(c => c.Slots).ThenInclude(s => s.AttachmentType)
             .Include(c => c.AcceptedAttachmentTypes)
+            .Include(c => c.MountPoints).ThenInclude(m => m.AttachmentType)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (component is null) return NotFound();
@@ -112,6 +114,7 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             .Include(c => c.Category)
             .Include(c => c.Slots).ThenInclude(s => s.AttachmentType)
             .Include(c => c.AcceptedAttachmentTypes)
+            .Include(c => c.MountPoints).ThenInclude(m => m.AttachmentType)
             .FirstOrDefaultAsync(c => c.Id == id);
 
     private static ComponentResponse ToResponse(Component c) => new(
@@ -131,6 +134,14 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             s.PositionXPercent,
             s.PositionYPercent
         )).ToList(),
-        c.AcceptedAttachmentTypes.Select(a => new AttachmentTypeResponse(a.Id, a.Name)).ToList()
+        c.AcceptedAttachmentTypes.Select(a => new AttachmentTypeResponse(a.Id, a.Name)).ToList(),
+        c.MountPoints.Select(m => new MountPointResponse(
+            m.Id,
+            m.AttachmentTypeId,
+            m.AttachmentType.Name,
+            m.Label,
+            m.PositionXPercent,
+            m.PositionYPercent
+        )).ToList()
     );
 }

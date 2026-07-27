@@ -12,4 +12,5 @@ public class Component
     public string? SvgAssetPath { get; set; }
     public List<Slot> Slots { get; set; } = [];
     public List<AttachmentType> AcceptedAttachmentTypes { get; set; } = [];
+    public List<MountPoint> MountPoints { get; set; } = [];
 }

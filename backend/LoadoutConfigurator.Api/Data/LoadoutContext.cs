@@ -11,6 +11,7 @@ public class LoadoutContext : DbContext
     public DbSet<Component> Components { get; set; } = null!;
     public DbSet<AttachmentType> AttachmentTypes { get; set; } = null!;
     public DbSet<Slot> Slots { get; set; } = null!;
+    public DbSet<MountPoint> MountPoints { get; set; } = null!;
     public DbSet<Loadout> Loadouts { get; set; } = null!;
     public DbSet<LoadoutItem> LoadoutItems { get; set; } = null!;
 

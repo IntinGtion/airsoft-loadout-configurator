@@ -18,6 +18,15 @@ export interface SlotResponse {
   positionYPercent: number
 }
 
+export interface MountPointResponse {
+  id: number
+  attachmentTypeId: number
+  attachmentTypeName: string
+  label: string
+  positionXPercent: number
+  positionYPercent: number
+}
+
 export interface ComponentResponse {
   id: number
   categoryId: number
@@ -29,6 +38,7 @@ export interface ComponentResponse {
   svgAssetPath: string | null
   slots: SlotResponse[]
   acceptedAttachmentTypes: AttachmentTypeResponse[]
+  mountPoints: MountPointResponse[]
 }
 
 export interface LoadoutSummary {
