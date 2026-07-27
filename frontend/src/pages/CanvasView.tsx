@@ -34,6 +34,12 @@ export function CanvasView() {
   // nearest free slot under the cursor.
   const slotPositions = useRef(new Map<number, DropCandidate>())
 
+  // The native HTML5 'drop' event's own clientX/clientY isn't reliable across
+  // browsers (some report stale or zeroed-out coordinates on drop). 'dragover'
+  // fires continuously and reliably throughout the drag, so track the latest
+  // pointer position there and use that instead of trusting the drop event.
+  const lastDragClientPos = useRef<{ x: number; y: number } | null>(null)
+
   const handleSlotsComputed = useCallback((slots: DropCandidate[]) => {
     slots.forEach(s => slotPositions.current.set(s.id, s))
   }, [])
@@ -73,6 +79,7 @@ export function CanvasView() {
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()
     setDragOver(true)
+    lastDragClientPos.current = { x: e.clientX, y: e.clientY }
   }
 
   async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -84,8 +91,9 @@ export function CanvasView() {
     if (!componentId) return
 
     const rect = e.currentTarget.getBoundingClientRect()
-    const dropX = e.clientX - rect.left
-    const dropY = e.clientY - rect.top
+    const clientPos = lastDragClientPos.current ?? { x: e.clientX, y: e.clientY }
+    const dropX = clientPos.x - rect.left
+    const dropY = clientPos.y - rect.top
 
     let nearest: DropCandidate | null = null
     let nearestDist = Infinity
@@ -98,18 +106,29 @@ export function CanvasView() {
       }
     }
 
-    // Not dropped near an existing slot — treat it as adding a new, independent
-    // item instead (e.g. the very first base component in an empty loadout, or a
-    // second unattached item next to it), same as the old "+" button in the list
-    // view already allowed.
-    const targetSlotId = nearest && nearestDist <= DROP_SNAP_DISTANCE ? nearest.id : null
-
-    try {
-      await api.loadouts.addItem(loadoutId, componentId, targetSlotId)
-      reload()
-    } catch (err) {
-      setError(String(err))
+    if (nearest && nearestDist <= DROP_SNAP_DISTANCE) {
+      try {
+        await api.loadouts.addItem(loadoutId, componentId, nearest.id)
+        reload()
+      } catch (err) {
+        setError(String(err))
+      }
+      return
     }
+
+    if (rootItems.length === 0) {
+      // Bootstrapping case: nothing placed yet, so any drop starts the loadout
+      // with this as a new independent base item.
+      try {
+        await api.loadouts.addItem(loadoutId, componentId, null)
+        reload()
+      } catch (err) {
+        setError(String(err))
+      }
+      return
+    }
+
+    setError('No attachment slot near where you dropped that.')
   }
 
   if (notFound) {
