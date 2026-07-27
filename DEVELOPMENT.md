@@ -107,8 +107,25 @@ Loadout
 - `Slot` gehört einer `Component` und hat einen `AttachmentType` (z.B. Picatinny) — das ist die Anbieter-Seite ("was kann an mir befestigt werden")
 - `MountPoint` gehört ebenfalls einer `Component`, ist aber die Empfänger-Seite ("wie/wo befestige ich mich an meinem Parent") — z.B. hat eine MOLLE-Tasche mehrere eigene MountPoints für ihre Straps, unabhängig von etwaigen eigenen `Slot`s, die sie selbst wieder anbietet (z.B. für ein Patch)
 - `Component.AcceptedAttachmentTypes` sagt, an welchen Slot-Typen die Komponente grundsätzlich befestigt werden kann (Typ-Ebene)
-- Beim Hinzufügen zu einem Loadout prüft der Server aktuell: passt `Component.AcceptedAttachmentTypes` zu `Slot.AttachmentTypeId`? Wenn nicht → 422 Unprocessable Entity. Das ist nur die Typ-Prüfung — die geometrische Footprint-Prüfung (passen alle `MountPoint`s der Komponente auf freie `Slot`s des Parents?) ist noch nicht gebaut, siehe Abschnitt 7
-- `Slot.PositionXPercent/YPercent` und `MountPoint.PositionXPercent/YPercent` sind für die ersten beiden Assets (Condor MOPC, BFG Ten-Speed) bereits echte, aus Figma exportierte Koordinaten (siehe Abschnitt 4 "Assets"); bei allen anderen Seed-Komponenten weiterhin Platzhalter
+- Beim Hinzufügen zu einem Loadout prüft der Server zweistufig: (1) passt `Component.AcceptedAttachmentTypes` zu `Slot.AttachmentTypeId`? (2) **Footprint-Match** ✅ erledigt (2026-07-27): passen alle `MountPoint`s der Komponente auf zusammenhängende freie `Slot`s des Parents? Beides → 422 Unprocessable Entity bei Fehlschlag, siehe "Footprint-Matching" unten
+- `Slot.PositionXPercent/YPercent` und `MountPoint.PositionXPercent/YPercent` sind für die ersten beiden Assets (Condor MOPC, BFG Ten-Speed) bereits echte, aus Figma exportierte Koordinaten (siehe Abschnitt 4 "Assets"); bei allen anderen Seed-Komponenten weiterhin Platzhalter. Werden nur fürs **Rendering** verwendet
+- `Slot.GridColumn/GridRow` und `MountPoint.GridColumn/GridRow` (neu, nullable) sind diskrete Rasterkoordinaten (z.B. MOLLE-Spalte/Reihe), unabhängig vom Prozent-Rendering. Werden fürs **Footprint-Matching** verwendet — siehe Begründung unten
+
+### Footprint-Matching (Server-seitige Platzierungsprüfung)
+
+Eine Komponente mit mehreren `MountPoint`s (z.B. die BFG Ten-Speed Pouch mit ihrem 2×4-MOLLE-Raster) braucht beim Andocken nicht nur einen passenden Slot-Typ, sondern ein ganzes zusammenhängendes Muster freier Slots am Parent, in derselben relativen Anordnung. Das würde man naiv über die Prozent-Positionen (`PositionXPercent/Y`) zu lösen versuchen — das geht aber nicht robust, weil diese Prozentwerte relativ zur jeweils eigenen SVG-Leinwand der Komponente sind und zwischen unterschiedlichen Assets nicht direkt vergleichbar sind (siehe den offenen "gemeinsamer Maßstab"-Punkt in Abschnitt 7); außerdem würden reale Pixel-Positionen selbst bei gleichem Maßstab nie exakt übereinstimmen und bräuchten eine Toleranzschwelle.
+
+Stattdessen läuft das Matching über die neuen **diskreten Rasterkoordinaten** `GridColumn`/`GridRow`, die direkt aus der ohnehin schon vergebenen Figma-Namenskonvention (`Slot{Spalte}_MOLLE_Row{Reihe}`) stammen:
+
+1. Anker-`MountPoint` der anzudockenden Komponente bestimmen (kleinste Row, dann kleinste Column)
+2. Für jeden weiteren `MountPoint`: relatives Delta (ΔSpalte, ΔReihe) zum Anker berechnen, auf den angeklickten Parent-Slot draufaddieren, prüfen ob dort ein `Slot` mit passendem `AttachmentType` existiert
+3. Existiert einer der berechneten Slots nicht → 422 ("passt hier nicht hin")
+4. Alle berechneten Slots gegen bereits belegte Slots der Geschwister-Items prüfen (rekursiv über deren eigene Footprints berechnet, keine eigene Belegungs-Tabelle nötig) → 422 bei Überlappung ("schon belegt")
+5. Komponenten ohne `MountPoint`s (die meisten Seed-Komponenten) fallen auf das bisherige Einzel-Slot-Verhalten zurück — als Nebeneffekt jetzt ebenfalls gegen Doppelbelegung eines einzelnen Slots abgesichert, was vorher nicht geprüft wurde
+6. Implementiert in `LoadoutsController.ComputeFootprint` / `ComputeOccupiedSlotIds` / `ValidateFootprint`, für `AddItem` und `MoveItem`
+7. Getestet über die API (Überlappung, Raster-Rand in beide Richtungen, nicht-überlappende Zweitplatzierung, Einzel-Slot-Komponenten)
+
+**Bewusst noch nicht gebaut:** Die Canvas-Oberfläche zeigt Footprint-Belegung visuell noch nicht an — belegte Nicht-Anker-Slots einer mehrpunktigen Komponente werden im Canvas noch als frei/klickbar dargestellt, ein Platzierungsversuch dort schlägt aber korrekt mit der 422-Fehlermeldung fehl (die im Frontend bereits angezeigt wird). Visuelles Vorab-Ausgrauen ist als Frontend-Polish für später vorgesehen, siehe Abschnitt 7.
 
 ### Layered-Rendering-Konzept für den Canvas-Konfigurator (geplant, siehe Abschnitt 7)
 
@@ -306,10 +323,11 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ### Mittelfristig — Canvas-Konfigurator (**das ist die eigentliche Kernfunktion**, siehe Abschnitt 1 + 3 "Layered-Rendering-Konzept")
 - `react-konva` installiert, Grundgerüst mit Klick-zu-Platzieren steht ✅ erledigt (2026-07-27), siehe Abschnitt 4 "Frontend"
+- Server-seitige **Footprint-Match-Logik** ✅ erledigt (2026-07-27), siehe Abschnitt 3 "Footprint-Matching" — Grid-basiert (`GridColumn/GridRow`), bewusst ohne Toleranz-Problematik, da unabhängig vom Prozent-/Pixel-Rendering
+- **Canvas zeigt Footprint-Belegung noch nicht visuell an** (nur Anker-Slot wird als belegt erkannt, siehe Abschnitt 3) — Nachziehen, sobald Drag & Drop gebaut wird, damit man nicht erst beim Ablegen eine Fehlermeldung bekommt
 - **Drag & Drop** statt Klick-zu-Platzieren: Komponenten aus einer Katalog-Liste auf freie Slots ziehen
-- **Footprint-Match-Logik** (ersetzt die bisherige reine Typ-Prüfung): beim Ablegen einer Komponente mit mehreren `MountPoints` (z.B. die 2×4-MOLLE-Pouch) prüfen, ob am Zielort genug zusammenhängende freie `Slot`s des Parents in der passenden relativen Anordnung UND mit passendem `AttachmentType` vorhanden sind — nicht nur ob irgendein einzelner Slot passt
 - Rekursion über mehr als 2 Ebenen testen (z.B. Optik auf Rail auf Gewehr) — bisher nur Plattenträger→Pouch verifiziert
-- Gemeinsamer Maßstab zwischen Assets verschiedener Figma-Dateien (aktuell rendert jede Kind-Komponente in fester Pixelgröße, siehe Abschnitt 4)
+- Gemeinsamer Maßstab zwischen Assets verschiedener Figma-Dateien (aktuell rendert jede Kind-Komponente in fester Pixelgröße, siehe Abschnitt 4). Wichtig laut Projektinhaber: Positionen werden zwischen Assets nie exakt übereinstimmen, sobald das angegangen wird braucht das Matching/Rendering eine Toleranzschwelle — das Footprint-Matching selbst umgeht dieses Problem bereits über Rasterkoordinaten (Abschnitt 3), betrifft also nur noch das visuelle Rendering
 - Colorway-Umschalter (Einfärben der Silhouetten per Fill, siehe Abschnitt 3) — beantwortet die "passt der Tan-Ton"-Frage, die der eigentliche Anlass für dieses Projekt war
 - Restliche Seed-Komponenten (Gewehre, Optiken, andere Taschen) brauchen ebenfalls noch echte Assets nach demselben Workflow (Abschnitt 4)
 
@@ -321,4 +339,4 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-27 — Canvas-Grundgerüst mit `react-konva` steht: Basis-Komponente + Slots + rekursiv gerenderte Kind-Komponenten, Klick-zu-Platzieren-Interaktion, end-to-end mit Playwright verifiziert (Abschnitt 4 "Frontend"). Damit ist die eigentliche Kernfunktion des Projekts (Abschnitt 1) erstmals sichtbar. Offen: Drag & Drop statt Klick, Footprint-Match-Logik, gemeinsamer Asset-Maßstab (Abschnitt 7). Setup auf Dritt-PC verifiziert (Node.js 22.18.0, .NET SDK 10.0.302, dotnet-ef 10.0.10 neu installiert).*
+*Zuletzt aktualisiert: 2026-07-27 — Server-seitige Footprint-Match-Logik für mehrpunktige Komponenten (Abschnitt 3), grid-basiert statt prozent-/pixelbasiert, um der noch offenen Maßstabs-/Toleranz-Frage (Abschnitt 7) auszuweichen. Damit prüft der Server jetzt nicht nur Attachment-Typ, sondern auch ob wirklich genug zusammenhängender Platz frei ist — die "passt das überhaupt drauf"-Frage aus Abschnitt 1. Über die API verifiziert (Überlappung, Rasterrand, Mehrfachplatzierung). Offen: dasselbe visuell im Canvas anzeigen, Drag & Drop, gemeinsamer Asset-Maßstab.*

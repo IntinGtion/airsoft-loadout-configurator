@@ -30,7 +30,9 @@ public record SlotResponse(
     string AttachmentTypeName,
     string Label,
     float PositionXPercent,
-    float PositionYPercent
+    float PositionYPercent,
+    int? GridColumn,
+    int? GridRow
 );
 
 public record MountPointResponse(
@@ -39,7 +41,9 @@ public record MountPointResponse(
     string AttachmentTypeName,
     string Label,
     float PositionXPercent,
-    float PositionYPercent
+    float PositionYPercent,
+    int? GridColumn,
+    int? GridRow
 );
 
 public record AttachmentTypeResponse(int Id, string Name);

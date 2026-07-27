@@ -132,7 +132,9 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             s.AttachmentType.Name,
             s.Label,
             s.PositionXPercent,
-            s.PositionYPercent
+            s.PositionYPercent,
+            s.GridColumn,
+            s.GridRow
         )).ToList(),
         c.AcceptedAttachmentTypes.Select(a => new AttachmentTypeResponse(a.Id, a.Name)).ToList(),
         c.MountPoints.Select(m => new MountPointResponse(
@@ -141,7 +143,9 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             m.AttachmentType.Name,
             m.Label,
             m.PositionXPercent,
-            m.PositionYPercent
+            m.PositionYPercent,
+            m.GridColumn,
+            m.GridRow
         )).ToList()
     );
 }

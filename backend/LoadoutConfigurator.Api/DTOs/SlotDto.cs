@@ -5,5 +5,7 @@ public record SlotRequest(
     int AttachmentTypeId,
     string Label,
     float PositionXPercent,
-    float PositionYPercent
+    float PositionYPercent,
+    int? GridColumn,
+    int? GridRow
 );

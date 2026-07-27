@@ -16,6 +16,8 @@ export interface SlotResponse {
   label: string
   positionXPercent: number
   positionYPercent: number
+  gridColumn: number | null
+  gridRow: number | null
 }
 
 export interface MountPointResponse {
@@ -25,6 +27,8 @@ export interface MountPointResponse {
   label: string
   positionXPercent: number
   positionYPercent: number
+  gridColumn: number | null
+  gridRow: number | null
 }
 
 export interface ComponentResponse {

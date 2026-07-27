@@ -83,6 +83,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
 
         var component = await db.Components
             .Include(c => c.AcceptedAttachmentTypes)
+            .Include(c => c.MountPoints)
             .FirstOrDefaultAsync(c => c.Id == request.ComponentId);
 
         if (component is null)
@@ -106,6 +107,10 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
                 {
                     error = $"'{component.Name}' does not accept '{parentSlot.AttachmentType.Name}' attachments."
                 });
+
+            var footprintError = await ValidateFootprint(id, component, parentSlot);
+            if (footprintError is not null)
+                return UnprocessableEntity(new { error = footprintError });
         }
 
         var item = new LoadoutItem
@@ -131,6 +136,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
     {
         var item = await db.LoadoutItems
             .Include(i => i.Component).ThenInclude(c => c.AcceptedAttachmentTypes)
+            .Include(i => i.Component).ThenInclude(c => c.MountPoints)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.LoadoutId == id);
 
         if (item is null) return NotFound();
@@ -152,6 +158,10 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
                 {
                     error = $"'{item.Component.Name}' does not accept '{parentSlot.AttachmentType.Name}' attachments."
                 });
+
+            var footprintError = await ValidateFootprint(id, item.Component, parentSlot, excludeItemId: item.Id);
+            if (footprintError is not null)
+                return UnprocessableEntity(new { error = footprintError });
         }
 
         item.ParentSlotId = request.ParentSlotId;
@@ -170,6 +180,97 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
         db.LoadoutItems.Remove(item);
         await db.SaveChangesAsync();
         return NoContent();
+    }
+
+    // ── Footprint matching ──────────────────────────────────────────────────
+    //
+    // A component with MountPoints (e.g. a pouch with a 2×4 grid of MOLLE straps)
+    // doesn't just need ONE compatible slot — it needs a whole matching pattern of
+    // free slots on the parent, in the same relative grid layout. We match this via
+    // discrete Slot/MountPoint.GridColumn/GridRow rather than the display PositionX/
+    // YPercent, since those percentages are relative to each asset's own SVG canvas
+    // and aren't directly comparable across different components (see DEVELOPMENT.md
+    // section 7 "gemeinsamer Maßstab" for the still-open visual-scale problem this
+    // sidesteps). Components without grid data fall back to the original single-slot
+    // behavior.
+
+    /// Returns the parent Slots this component would occupy if anchored at `anchorSlot`,
+    /// or null if its MountPoint footprint doesn't line up with the parent's Slot grid.
+    private static List<Slot>? ComputeFootprint(Component component, Slot anchorSlot, List<Slot> parentSlots)
+    {
+        var gridMountPoints = component.MountPoints
+            .Where(m => m.GridColumn.HasValue && m.GridRow.HasValue)
+            .ToList();
+
+        if (gridMountPoints.Count == 0 || anchorSlot.GridColumn is null || anchorSlot.GridRow is null)
+            return [anchorSlot];
+
+        var anchorMountPoint = gridMountPoints
+            .OrderBy(m => m.GridRow).ThenBy(m => m.GridColumn)
+            .First();
+
+        var footprint = new List<Slot>();
+        foreach (var mountPoint in gridMountPoints)
+        {
+            var targetColumn = anchorSlot.GridColumn.Value + (mountPoint.GridColumn!.Value - anchorMountPoint.GridColumn!.Value);
+            var targetRow = anchorSlot.GridRow.Value + (mountPoint.GridRow!.Value - anchorMountPoint.GridRow!.Value);
+
+            var match = parentSlots.FirstOrDefault(s =>
+                s.GridColumn == targetColumn && s.GridRow == targetRow && s.AttachmentTypeId == mountPoint.AttachmentTypeId);
+
+            if (match is null) return null;
+            footprint.Add(match);
+        }
+
+        return footprint;
+    }
+
+    /// Slot IDs (among `parentSlots`) already occupied by sibling items attached to this parent,
+    /// optionally excluding one item (used when moving an item — it shouldn't block itself).
+    private async Task<HashSet<int>> ComputeOccupiedSlotIds(int loadoutId, List<Slot> parentSlots, int? excludeItemId)
+    {
+        var parentSlotIds = parentSlots.Select(s => s.Id).ToHashSet();
+
+        var siblings = await db.LoadoutItems
+            .Where(i => i.LoadoutId == loadoutId
+                && i.Id != excludeItemId
+                && i.ParentSlotId.HasValue
+                && parentSlotIds.Contains(i.ParentSlotId.Value))
+            .Include(i => i.Component).ThenInclude(c => c.MountPoints)
+            .ToListAsync();
+
+        var occupied = new HashSet<int>();
+        foreach (var sibling in siblings)
+        {
+            var siblingAnchor = parentSlots.First(s => s.Id == sibling.ParentSlotId!.Value);
+            var footprint = ComputeFootprint(sibling.Component, siblingAnchor, parentSlots);
+            if (footprint is null) continue; // pre-existing data shouldn't be invalid, but don't crash if it is
+            foreach (var slot in footprint) occupied.Add(slot.Id);
+        }
+
+        return occupied;
+    }
+
+    /// Runs the full footprint check for placing `component` at `parentSlot`.
+    /// Returns an error message if it doesn't fit or overlaps another item, null if it's valid.
+    private async Task<string?> ValidateFootprint(int loadoutId, Component component, Slot parentSlot, int? excludeItemId = null)
+    {
+        var parentSlots = await db.Slots
+            .Where(s => s.ComponentId == parentSlot.ComponentId)
+            .ToListAsync();
+
+        var footprint = ComputeFootprint(component, parentSlot, parentSlots);
+        if (footprint is null)
+            return $"'{component.Name}' does not fit here — its attachment pattern doesn't line up with the available slots at this position.";
+
+        var occupied = await ComputeOccupiedSlotIds(loadoutId, parentSlots, excludeItemId);
+        if (footprint.Any(s => occupied.Contains(s.Id)))
+        {
+            var slotWord = footprint.Count == 1 ? "slot" : "slots";
+            return $"'{component.Name}' needs {footprint.Count} free {slotWord} here, but at least one is already occupied.";
+        }
+
+        return null;
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────

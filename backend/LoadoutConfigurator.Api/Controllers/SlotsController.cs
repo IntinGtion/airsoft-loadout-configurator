@@ -50,7 +50,9 @@ public class SlotsController(LoadoutContext db) : ControllerBase
             AttachmentTypeId = request.AttachmentTypeId,
             Label = request.Label,
             PositionXPercent = request.PositionXPercent,
-            PositionYPercent = request.PositionYPercent
+            PositionYPercent = request.PositionYPercent,
+            GridColumn = request.GridColumn,
+            GridRow = request.GridRow
         };
 
         db.Slots.Add(slot);
@@ -77,6 +79,8 @@ public class SlotsController(LoadoutContext db) : ControllerBase
         slot.Label = request.Label;
         slot.PositionXPercent = request.PositionXPercent;
         slot.PositionYPercent = request.PositionYPercent;
+        slot.GridColumn = request.GridColumn;
+        slot.GridRow = request.GridRow;
 
         await db.SaveChangesAsync();
 
@@ -103,6 +107,8 @@ public class SlotsController(LoadoutContext db) : ControllerBase
         s.AttachmentType.Name,
         s.Label,
         s.PositionXPercent,
-        s.PositionYPercent
+        s.PositionYPercent,
+        s.GridColumn,
+        s.GridRow
     );
 }
