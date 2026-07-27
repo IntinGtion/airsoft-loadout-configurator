@@ -3,6 +3,7 @@ import { api } from './api'
 import { LoadoutSwitcher } from './components/LoadoutSwitcher'
 import { ComponentBrowser } from './pages/ComponentBrowser'
 import { LoadoutBuilder } from './pages/LoadoutBuilder'
+import { CanvasView } from './pages/CanvasView'
 import styles from './App.module.css'
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<ComponentBrowser />} />
           <Route path="/loadout/:id" element={<LoadoutBuilder />} />
+          <Route path="/loadout/:id/canvas" element={<CanvasView />} />
         </Routes>
       </div>
     </div>

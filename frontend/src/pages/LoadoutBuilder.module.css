@@ -16,6 +16,21 @@
   padding-top: 1rem;
   border-bottom: 1px solid var(--border);
   padding-bottom: 1rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.canvasLink {
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.canvasLink:hover {
+  text-decoration: underline;
 }
 
 .title {

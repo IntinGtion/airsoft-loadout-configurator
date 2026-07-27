@@ -80,6 +80,7 @@ export function LoadoutBuilder() {
               {components.length} item{components.length !== 1 ? 's' : ''}
             </p>
           </div>
+          <Link className={styles.canvasLink} to={`/loadout/${loadoutId}/canvas`}>Canvas view →</Link>
         </header>
 
         {error && <p className={styles.error}>{error}</p>}
