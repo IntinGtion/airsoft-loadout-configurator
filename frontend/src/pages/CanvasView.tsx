@@ -9,6 +9,7 @@ import { CanvasNode, CHILD_DISPLAY_WIDTH_FALLBACK, type DropCandidate } from '..
 import { COLORWAYS } from '../components/canvas/colorways'
 import { getDisplayWidth } from '../components/canvas/scale'
 import { getRecoloredSvgUrl } from '../components/canvas/recolorSvg'
+import { getAnchorMountPointPercent } from '../components/canvas/footprint'
 import styles from './CanvasView.module.css'
 
 const STAGE_WIDTH = 640
@@ -48,6 +49,7 @@ export function CanvasView() {
 
   const draggingComponent = dragging ? catalog.find(c => c.id === dragging.componentId) ?? null : null
   const [dragPreviewUrl, setDragPreviewUrl] = useState<string | null>(null)
+  const [dragNaturalSize, setDragNaturalSize] = useState<{ w: number; h: number } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -182,6 +184,17 @@ export function CanvasView() {
     }
   }, [dragging, placeComponent])
 
+  // Anchor the ghost preview on the component's own anchor mount point (not its
+  // top-left corner or visual center) so the cursor sits exactly where it would
+  // dock — same reasoning as CanvasNode's targetX/targetY/anchorPercent.
+  const dragAnchor = draggingComponent ? getAnchorMountPointPercent(draggingComponent) : { x: 0, y: 0 }
+  const dragPreviewWidth = draggingComponent
+    ? Math.min(getDisplayWidth(draggingComponent, CHILD_DISPLAY_WIDTH_FALLBACK), DRAG_PREVIEW_MAX_WIDTH)
+    : 0
+  const dragPreviewHeight = dragNaturalSize ? dragPreviewWidth * (dragNaturalSize.h / dragNaturalSize.w) : null
+  const dragOffsetX = (dragAnchor.x / 100) * dragPreviewWidth
+  const dragOffsetY = dragPreviewHeight != null ? (dragAnchor.y / 100) * dragPreviewHeight : 0
+
   if (notFound) {
     return (
       <div className={styles.notFound}>
@@ -246,8 +259,9 @@ export function CanvasView() {
                     <CanvasNode
                       key={item.id}
                       component={component}
-                      x={(STAGE_WIDTH - rootWidth) / 2}
-                      y={20 + i * 40}
+                      targetX={(STAGE_WIDTH - rootWidth) / 2}
+                      targetY={20 + i * 40}
+                      anchorPercent={{ x: 0, y: 0 }}
                       width={rootWidth}
                       componentsById={componentsById}
                       childItemsBySlotId={childItemsBySlotId}
@@ -284,18 +298,29 @@ export function CanvasView() {
 
       {dragging && dragPos && (
         <div className={styles.dragGhost} style={{ left: dragPos.x, top: dragPos.y }}>
-          {dragPreviewUrl && draggingComponent && (
-            <img
-              src={dragPreviewUrl}
-              alt=""
-              className={styles.dragGhostImage}
-              style={{
-                width: Math.min(
-                  getDisplayWidth(draggingComponent, CHILD_DISPLAY_WIDTH_FALLBACK),
-                  DRAG_PREVIEW_MAX_WIDTH
-                ),
-              }}
-            />
+          {dragPreviewUrl && (
+            <div
+              className={styles.dragGhostImageWrap}
+              style={{ left: -dragOffsetX, top: -dragOffsetY, width: dragPreviewWidth }}
+            >
+              <img
+                src={dragPreviewUrl}
+                alt=""
+                className={styles.dragGhostImage}
+                style={{ width: dragPreviewWidth }}
+                onLoad={e =>
+                  setDragNaturalSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })
+                }
+              />
+              {dragPreviewHeight != null &&
+                draggingComponent?.mountPoints.map(mp => (
+                  <span
+                    key={mp.id}
+                    className={styles.dragGhostMountDot}
+                    style={{ left: `${mp.positionXPercent}%`, top: `${mp.positionYPercent}%` }}
+                  />
+                ))}
+            </div>
           )}
           <span className={styles.dragGhostLabel}>{dragging.name}</span>
         </div>

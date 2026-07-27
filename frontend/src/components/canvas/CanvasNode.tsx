@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ComponentResponse, LoadoutItemResponse } from '../../api/types'
 import { ComponentSprite } from './ComponentSprite'
 import { SlotMarker } from './SlotMarker'
-import { computeFootprintSlotIds } from './footprint'
+import { computeFootprintSlotIds, getAnchorMountPointPercent } from './footprint'
 import { getDisplayWidth } from './scale'
 
 // Fallback for components without a RealWidthMm — matches the flat size used
@@ -19,8 +19,13 @@ export interface DropCandidate {
 
 interface Props {
   component: ComponentResponse
-  x: number
-  y: number
+  // The point (in stage coordinates) that this component's own anchor mount
+  // point should land on — not its top-left corner. For a root item, pass
+  // anchorPercent {x:0, y:0} so target IS the top-left, same as before this
+  // distinction existed.
+  targetX: number
+  targetY: number
+  anchorPercent: { x: number; y: number }
   width: number
   componentsById: Map<number, ComponentResponse>
   childItemsBySlotId: Map<number, LoadoutItemResponse>
@@ -30,8 +35,9 @@ interface Props {
 
 export function CanvasNode({
   component,
-  x,
-  y,
+  targetX,
+  targetY,
+  anchorPercent,
   width,
   componentsById,
   childItemsBySlotId,
@@ -40,6 +46,13 @@ export function CanvasNode({
 }: Props) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const height = naturalSize ? width * (naturalSize.h / naturalSize.w) : null
+
+  // Top-left render position, back-solved so the anchor mount point (not the
+  // sprite's corner or center) lands exactly on targetX/targetY. Before the
+  // image has loaded we don't know its aspect ratio yet, so `y` briefly uses
+  // targetY as-is — corrected the moment `height` becomes available.
+  const x = targetX - (anchorPercent.x / 100) * width
+  const y = height != null ? targetY - (anchorPercent.y / 100) * height : targetY
 
   // Slots consumed by a placed component's own footprint (e.g. the other 7 slots
   // under a 2x4-MOLLE pouch), not just the one slot it's directly anchored to —
@@ -98,8 +111,9 @@ export function CanvasNode({
               <CanvasNode
                 key={slot.id}
                 component={childComponent}
-                x={sx - childWidth / 2}
-                y={sy - childWidth / 2}
+                targetX={sx}
+                targetY={sy}
+                anchorPercent={getAnchorMountPointPercent(childComponent)}
                 width={childWidth}
                 componentsById={componentsById}
                 childItemsBySlotId={childItemsBySlotId}

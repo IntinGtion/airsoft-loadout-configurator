@@ -1,4 +1,28 @@
-import type { ComponentResponse, SlotResponse } from '../../api/types'
+import type { ComponentResponse, MountPointResponse, SlotResponse } from '../../api/types'
+
+// The mount point a component is anchored by when docking onto a parent slot —
+// convention shared with the backend (LoadoutsController.ComputeFootprint):
+// smallest grid row, then smallest grid column. Returns null for components with
+// no grid-based mount points (nothing to anchor by).
+function getAnchorMountPoint(component: ComponentResponse): MountPointResponse | null {
+  const gridMountPoints = component.mountPoints.filter(
+    m => m.gridColumn != null && m.gridRow != null
+  )
+  if (gridMountPoints.length === 0) return null
+  return [...gridMountPoints].sort(
+    (a, b) => a.gridRow! - b.gridRow! || a.gridColumn! - b.gridColumn!
+  )[0]
+}
+
+// Where the anchor mount point sits within the component's own SVG (0-100%),
+// used to position its rendered sprite so that point — not the sprite's visual
+// center — lands exactly on the parent slot it's docked to. Falls back to the
+// center for components without grid mount points, matching the simple
+// single-point behavior they had before this distinction existed.
+export function getAnchorMountPointPercent(component: ComponentResponse): { x: number; y: number } {
+  const anchor = getAnchorMountPoint(component)
+  return anchor ? { x: anchor.positionXPercent, y: anchor.positionYPercent } : { x: 50, y: 50 }
+}
 
 // Mirrors the backend's LoadoutsController.ComputeFootprint: given a component
 // anchored at `anchorSlot`, returns the full set of parent slot IDs it occupies
@@ -13,14 +37,11 @@ export function computeFootprintSlotIds(
   const gridMountPoints = childComponent.mountPoints.filter(
     m => m.gridColumn != null && m.gridRow != null
   )
+  const anchorMountPoint = getAnchorMountPoint(childComponent)
 
-  if (gridMountPoints.length === 0 || anchorSlot.gridColumn == null || anchorSlot.gridRow == null) {
+  if (!anchorMountPoint || anchorSlot.gridColumn == null || anchorSlot.gridRow == null) {
     return new Set([anchorSlot.id])
   }
-
-  const anchorMountPoint = [...gridMountPoints].sort(
-    (a, b) => a.gridRow! - b.gridRow! || a.gridColumn! - b.gridColumn!
-  )[0]
 
   const slotIds = new Set<number>()
   for (const mp of gridMountPoints) {
