@@ -97,34 +97,42 @@ export function CanvasNode({
         />
       )}
 
+      {/* Markers render before (so, underneath, in Konva's paint order) any attached
+          children below — otherwise a sibling slot occupied by another item's own
+          footprint (not its anchor) would draw its grey "occupied" dot on top of
+          that item's sprite instead of being hidden behind it. */}
       {height != null &&
         component.slots.map(slot => {
+          if (childItemsBySlotId.has(slot.id)) return null
           const sx = x + (slot.positionXPercent / 100) * width
           const sy = y + (slot.positionYPercent / 100) * height
-          const childItem = childItemsBySlotId.get(slot.id)
-
-          if (childItem) {
-            const childComponent = componentsById.get(childItem.componentId)
-            if (!childComponent) return null
-            const childWidth = getDisplayWidth(childComponent, CHILD_DISPLAY_WIDTH_FALLBACK)
-            return (
-              <CanvasNode
-                key={slot.id}
-                component={childComponent}
-                targetX={sx}
-                targetY={sy}
-                anchorPercent={getAnchorMountPointPercent(childComponent)}
-                width={childWidth}
-                componentsById={componentsById}
-                childItemsBySlotId={childItemsBySlotId}
-                onSlotsComputed={onSlotsComputed}
-                colorway={colorway}
-              />
-            )
-          }
-
           return (
             <SlotMarker key={slot.id} x={sx} y={sy} occupied={occupiedSlotIds.has(slot.id)} />
+          )
+        })}
+
+      {height != null &&
+        component.slots.map(slot => {
+          const childItem = childItemsBySlotId.get(slot.id)
+          if (!childItem) return null
+          const childComponent = componentsById.get(childItem.componentId)
+          if (!childComponent) return null
+          const sx = x + (slot.positionXPercent / 100) * width
+          const sy = y + (slot.positionYPercent / 100) * height
+          const childWidth = getDisplayWidth(childComponent, CHILD_DISPLAY_WIDTH_FALLBACK)
+          return (
+            <CanvasNode
+              key={slot.id}
+              component={childComponent}
+              targetX={sx}
+              targetY={sy}
+              anchorPercent={getAnchorMountPointPercent(childComponent)}
+              width={childWidth}
+              componentsById={componentsById}
+              childItemsBySlotId={childItemsBySlotId}
+              onSlotsComputed={onSlotsComputed}
+              colorway={colorway}
+            />
           )
         })}
     </>
