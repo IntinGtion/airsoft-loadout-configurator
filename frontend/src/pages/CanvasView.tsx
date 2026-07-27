@@ -5,15 +5,17 @@ import { api } from '../api'
 import type { ComponentResponse, LoadoutItemResponse, LoadoutResponse } from '../api/types'
 import { useComponents } from '../hooks/useComponents'
 import { CategoryNav } from '../components/CategoryNav'
-import { CanvasNode, type DropCandidate } from '../components/canvas/CanvasNode'
+import { CanvasNode, CHILD_DISPLAY_WIDTH_FALLBACK, type DropCandidate } from '../components/canvas/CanvasNode'
 import { COLORWAYS } from '../components/canvas/colorways'
 import { getDisplayWidth } from '../components/canvas/scale'
+import { getRecoloredSvgUrl } from '../components/canvas/recolorSvg'
 import styles from './CanvasView.module.css'
 
 const STAGE_WIDTH = 640
 const STAGE_HEIGHT = 720
 const ROOT_DISPLAY_WIDTH_FALLBACK = 380
 const DROP_SNAP_DISTANCE = 26
+const DRAG_PREVIEW_MAX_WIDTH = 140
 
 interface DraggingItem {
   componentId: number
@@ -43,6 +45,21 @@ export function CanvasView() {
   const stageWrapRef = useRef<HTMLDivElement | null>(null)
 
   const { categories, components: catalog, selected, setSelected } = useComponents()
+
+  const draggingComponent = dragging ? catalog.find(c => c.id === dragging.componentId) ?? null : null
+  const [dragPreviewUrl, setDragPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const svgAssetPath = draggingComponent?.svgAssetPath
+    const resolved = svgAssetPath ? getRecoloredSvgUrl(svgAssetPath, colorway) : Promise.resolve(null)
+    resolved.then(url => {
+      if (!cancelled) setDragPreviewUrl(url)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [draggingComponent, colorway])
 
   // Absolute canvas positions of every currently rendered slot, keyed by slot ID —
   // updated by CanvasNode as it computes layout, read once at drop time to find the
@@ -266,11 +283,21 @@ export function CanvasView() {
       </aside>
 
       {dragging && dragPos && (
-        <div
-          className={styles.dragGhost}
-          style={{ left: dragPos.x, top: dragPos.y }}
-        >
-          {dragging.name}
+        <div className={styles.dragGhost} style={{ left: dragPos.x, top: dragPos.y }}>
+          {dragPreviewUrl && draggingComponent && (
+            <img
+              src={dragPreviewUrl}
+              alt=""
+              className={styles.dragGhostImage}
+              style={{
+                width: Math.min(
+                  getDisplayWidth(draggingComponent, CHILD_DISPLAY_WIDTH_FALLBACK),
+                  DRAG_PREVIEW_MAX_WIDTH
+                ),
+              }}
+            />
+          )}
+          <span className={styles.dragGhostLabel}>{dragging.name}</span>
         </div>
       )}
     </div>

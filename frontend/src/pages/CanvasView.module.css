@@ -212,6 +212,22 @@
 .dragGhost {
   position: fixed;
   transform: translate(12px, 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.dragGhostImage {
+  display: block;
+  height: auto;
+  opacity: 0.85;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+}
+
+.dragGhostLabel {
   background: var(--surface-hover);
   border: 1px solid var(--accent);
   border-radius: 6px;
@@ -219,7 +235,6 @@
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-primary);
-  pointer-events: none;
-  z-index: 100;
+  white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
