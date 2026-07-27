@@ -135,6 +135,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
     public async Task<IActionResult> MoveItem(int id, int itemId, LoadoutItemRequest request)
     {
         var item = await db.LoadoutItems
+            .Include(i => i.Component).ThenInclude(c => c.Category)
             .Include(i => i.Component).ThenInclude(c => c.AcceptedAttachmentTypes)
             .Include(i => i.Component).ThenInclude(c => c.MountPoints)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.LoadoutId == id);

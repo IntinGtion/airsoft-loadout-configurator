@@ -5,6 +5,7 @@ import { api } from '../api'
 import type { ComponentResponse, LoadoutItemResponse, LoadoutResponse } from '../api/types'
 import { useComponents } from '../hooks/useComponents'
 import { CategoryNav } from '../components/CategoryNav'
+import { LoadoutSidebar } from '../components/LoadoutSidebar'
 import { CanvasNode, CHILD_DISPLAY_WIDTH_FALLBACK, type DropCandidate } from '../components/canvas/CanvasNode'
 import { COLORWAYS } from '../components/canvas/colorways'
 import { getDisplayWidth } from '../components/canvas/scale'
@@ -33,6 +34,7 @@ export function CanvasView() {
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [colorway, setColorway] = useState<string | null>(null)
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
 
   // Native HTML5 drag-and-drop (draggable/dragstart/dragover/drop) turned out to be
   // unreliable in real browsers when the drop target contains a <canvas> (Konva's
@@ -110,7 +112,7 @@ export function CanvasView() {
     let nearest: DropCandidate | null = null
     let nearestDist = Infinity
     for (const candidate of slotPositions.current.values()) {
-      if (candidate.occupied) continue
+      if (candidate.occupiedByItemId != null) continue
       const dist = Math.hypot(candidate.x - dropX, candidate.y - dropY)
       if (dist < nearestDist) {
         nearestDist = dist
@@ -142,6 +144,45 @@ export function CanvasView() {
 
     setError('No attachment slot near where you dropped that.')
   }, [loadoutId, reload, rootItems.length])
+
+  // Moving an already-placed item: unlike placeComponent, a slot the item itself
+  // already occupies (via its own footprint) doesn't block it — you can drop it
+  // back near its own current spot — and a miss always detaches it to become an
+  // independent item rather than only doing so when the canvas is empty.
+  const moveExistingItem = useCallback(async (itemId: number, componentId: number, dropX: number, dropY: number) => {
+    setError(null)
+
+    let nearest: DropCandidate | null = null
+    let nearestDist = Infinity
+    for (const candidate of slotPositions.current.values()) {
+      if (candidate.occupiedByItemId != null && candidate.occupiedByItemId !== itemId) continue
+      const dist = Math.hypot(candidate.x - dropX, candidate.y - dropY)
+      if (dist < nearestDist) {
+        nearestDist = dist
+        nearest = candidate
+      }
+    }
+
+    const targetSlotId = nearest && nearestDist <= DROP_SNAP_DISTANCE ? nearest.id : null
+
+    try {
+      await api.loadouts.moveItem(loadoutId, itemId, componentId, targetSlotId)
+      reload()
+    } catch (err) {
+      setError(String(err))
+    }
+  }, [loadoutId, reload])
+
+  const handleRemoveItem = useCallback(async (itemId: number) => {
+    setError(null)
+    try {
+      await api.loadouts.removeItem(loadoutId, itemId)
+      setSelectedItemId(current => (current === itemId ? null : current))
+      reload()
+    } catch (err) {
+      setError(String(err))
+    }
+  }, [loadoutId, reload])
 
   function startDrag(item: DraggingItem, e: React.MouseEvent) {
     e.preventDefault()
@@ -249,7 +290,13 @@ export function CanvasView() {
                 <Link to={`/loadout/${loadoutId}`}>list view</Link>
               </div>
             )}
-            <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
+            <Stage
+              width={STAGE_WIDTH}
+              height={STAGE_HEIGHT}
+              onClick={e => {
+                if (e.target === e.target.getStage()) setSelectedItemId(null)
+              }}
+            >
               <Layer>
                 {rootItems.map((item, i) => {
                   const component = componentsById.get(item.componentId)
@@ -259,6 +306,7 @@ export function CanvasView() {
                     <CanvasNode
                       key={item.id}
                       component={component}
+                      itemId={item.id}
                       targetX={(STAGE_WIDTH - rootWidth) / 2}
                       targetY={20 + i * 40}
                       anchorPercent={{ x: 0, y: 0 }}
@@ -267,6 +315,10 @@ export function CanvasView() {
                       childItemsBySlotId={childItemsBySlotId}
                       onSlotsComputed={handleSlotsComputed}
                       colorway={colorway}
+                      selectedItemId={selectedItemId}
+                      onSelectItem={setSelectedItemId}
+                      onDeleteItem={handleRemoveItem}
+                      onItemDragEnd={moveExistingItem}
                     />
                   )
                 })}
@@ -275,6 +327,8 @@ export function CanvasView() {
           </div>
         )}
       </div>
+
+      <LoadoutSidebar loadout={loadout} loading={loading} onRemove={handleRemoveItem} />
 
       <aside className={styles.catalog}>
         <CategoryNav categories={categories} selected={selected} onSelect={setSelected} />

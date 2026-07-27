@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Image as KonvaImage } from 'react-konva'
+import type { KonvaEventObject } from 'konva/lib/Node'
 import useImage from 'use-image'
 import { getRecoloredSvgUrl } from './recolorSvg'
 
@@ -10,10 +11,24 @@ interface Props {
   width: number
   opacity?: number
   colorway?: string | null
+  draggable?: boolean
   onLoad?: (naturalWidth: number, naturalHeight: number) => void
+  onClick?: (e: KonvaEventObject<MouseEvent>) => void
+  onDragEnd?: (e: KonvaEventObject<DragEvent>) => void
 }
 
-export function ComponentSprite({ url, x, y, width, opacity = 1, colorway = null, onLoad }: Props) {
+export function ComponentSprite({
+  url,
+  x,
+  y,
+  width,
+  opacity = 1,
+  colorway = null,
+  draggable = false,
+  onLoad,
+  onClick,
+  onDragEnd,
+}: Props) {
   const [resolvedUrl, setResolvedUrl] = useState(url)
 
   useEffect(() => {
@@ -36,5 +51,17 @@ export function ComponentSprite({ url, x, y, width, opacity = 1, colorway = null
   if (!image) return null
 
   const height = width * (image.naturalHeight / image.naturalWidth)
-  return <KonvaImage image={image} x={x} y={y} width={width} height={height} opacity={opacity} />
+  return (
+    <KonvaImage
+      image={image}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      opacity={opacity}
+      draggable={draggable}
+      onClick={onClick}
+      onDragEnd={onDragEnd}
+    />
+  )
 }
