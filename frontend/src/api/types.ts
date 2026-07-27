@@ -40,6 +40,7 @@ export interface ComponentResponse {
   weightGrams: number | null
   priceEur: number | null
   svgAssetPath: string | null
+  realWidthMm: number | null
   slots: SlotResponse[]
   acceptedAttachmentTypes: AttachmentTypeResponse[]
   mountPoints: MountPointResponse[]

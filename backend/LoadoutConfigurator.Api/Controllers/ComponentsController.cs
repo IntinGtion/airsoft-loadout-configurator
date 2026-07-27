@@ -59,6 +59,7 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             WeightGrams = request.WeightGrams,
             PriceEur = request.PriceEur,
             SvgAssetPath = request.SvgAssetPath,
+            RealWidthMm = request.RealWidthMm,
             AcceptedAttachmentTypes = attachmentTypes
         };
 
@@ -91,6 +92,7 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
         component.WeightGrams = request.WeightGrams;
         component.PriceEur = request.PriceEur;
         component.SvgAssetPath = request.SvgAssetPath;
+        component.RealWidthMm = request.RealWidthMm;
         component.AcceptedAttachmentTypes = attachmentTypes;
 
         await db.SaveChangesAsync();
@@ -126,6 +128,7 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
         c.WeightGrams,
         c.PriceEur,
         c.SvgAssetPath,
+        c.RealWidthMm,
         c.Slots.Select(s => new SlotResponse(
             s.Id,
             s.AttachmentTypeId,

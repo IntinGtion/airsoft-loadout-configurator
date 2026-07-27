@@ -3,8 +3,11 @@ import type { ComponentResponse, LoadoutItemResponse } from '../../api/types'
 import { ComponentSprite } from './ComponentSprite'
 import { SlotMarker } from './SlotMarker'
 import { computeFootprintSlotIds } from './footprint'
+import { getDisplayWidth } from './scale'
 
-export const CHILD_DISPLAY_WIDTH = 64
+// Fallback for components without a RealWidthMm — matches the flat size used
+// before real-world sizing existed.
+export const CHILD_DISPLAY_WIDTH_FALLBACK = 64
 
 export interface DropCandidate {
   id: number
@@ -90,13 +93,14 @@ export function CanvasNode({
           if (childItem) {
             const childComponent = componentsById.get(childItem.componentId)
             if (!childComponent) return null
+            const childWidth = getDisplayWidth(childComponent, CHILD_DISPLAY_WIDTH_FALLBACK)
             return (
               <CanvasNode
                 key={slot.id}
                 component={childComponent}
-                x={sx - CHILD_DISPLAY_WIDTH / 2}
-                y={sy - CHILD_DISPLAY_WIDTH / 2}
-                width={CHILD_DISPLAY_WIDTH}
+                x={sx - childWidth / 2}
+                y={sy - childWidth / 2}
+                width={childWidth}
                 componentsById={componentsById}
                 childItemsBySlotId={childItemsBySlotId}
                 onSlotsComputed={onSlotsComputed}

@@ -7,6 +7,7 @@ public record ComponentRequest(
     decimal? WeightGrams,
     decimal? PriceEur,
     string? SvgAssetPath,
+    decimal? RealWidthMm,
     List<int> AcceptedAttachmentTypeIds
 );
 
@@ -19,6 +20,7 @@ public record ComponentResponse(
     decimal? WeightGrams,
     decimal? PriceEur,
     string? SvgAssetPath,
+    decimal? RealWidthMm,
     List<SlotResponse> Slots,
     List<AttachmentTypeResponse> AcceptedAttachmentTypes,
     List<MountPointResponse> MountPoints

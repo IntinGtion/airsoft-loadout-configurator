@@ -7,11 +7,12 @@ import { useComponents } from '../hooks/useComponents'
 import { CategoryNav } from '../components/CategoryNav'
 import { CanvasNode, type DropCandidate } from '../components/canvas/CanvasNode'
 import { COLORWAYS } from '../components/canvas/colorways'
+import { getDisplayWidth } from '../components/canvas/scale'
 import styles from './CanvasView.module.css'
 
 const STAGE_WIDTH = 640
 const STAGE_HEIGHT = 720
-const ROOT_DISPLAY_WIDTH = 380
+const ROOT_DISPLAY_WIDTH_FALLBACK = 380
 const DROP_SNAP_DISTANCE = 26
 
 export function CanvasView() {
@@ -166,13 +167,14 @@ export function CanvasView() {
                 {rootItems.map((item, i) => {
                   const component = componentsById.get(item.componentId)
                   if (!component) return null
+                  const rootWidth = getDisplayWidth(component, ROOT_DISPLAY_WIDTH_FALLBACK)
                   return (
                     <CanvasNode
                       key={item.id}
                       component={component}
-                      x={(STAGE_WIDTH - ROOT_DISPLAY_WIDTH) / 2}
+                      x={(STAGE_WIDTH - rootWidth) / 2}
                       y={20 + i * 40}
-                      width={ROOT_DISPLAY_WIDTH}
+                      width={rootWidth}
                       componentsById={componentsById}
                       childItemsBySlotId={childItemsBySlotId}
                       onSlotsComputed={handleSlotsComputed}

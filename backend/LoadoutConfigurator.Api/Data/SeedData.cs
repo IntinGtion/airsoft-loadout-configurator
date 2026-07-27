@@ -39,6 +39,7 @@ public static class SeedData
             Manufacturer = "Crye Precision",
             WeightGrams = 1050,
             PriceEur = 349,
+            RealWidthMm = 260, // ca. Frontpanel-Breite laut Herstellerangabe
             Slots =
             [
                 new Slot { AttachmentType = molle, Label = "Front MOLLE Panel",   PositionXPercent = 50, PositionYPercent = 30 },
@@ -56,6 +57,7 @@ public static class SeedData
             Manufacturer = "Ferro Concepts",
             WeightGrams = 820,
             PriceEur = 415,
+            RealWidthMm = 255,
             Slots =
             [
                 new Slot { AttachmentType = molle, Label = "Front MOLLE Panel",   PositionXPercent = 50, PositionYPercent = 28 },
@@ -73,6 +75,7 @@ public static class SeedData
             Manufacturer = "Condor Outdoor",
             WeightGrams = 1200,
             PriceEur = 119,
+            RealWidthMm = 270, // ca. Frontpanel-Breite, generischer Plattenträger für SAPI-Plates 10x12"
             SvgAssetPath = "/components/condor-mopc.svg",
             // Slot-Koordinaten aus Figma-Datei "Plattenträger MVP" (Frame PlateCarrier_MOPC_Front) exportiert:
             // absolute Position der MOLLE-Marker-Ellipsen relativ zur Frame-BoundingBox in Prozent umgerechnet.
@@ -125,6 +128,7 @@ public static class SeedData
             Manufacturer = "Tokyo Marui",
             WeightGrams = 3200,
             PriceEur = 589,
+            RealWidthMm = 840, // Gesamtlänge (längste Ausdehnung, keine "Breite" i.e.S.)
             Slots =
             [
                 new Slot { AttachmentType = picatinny, Label = "Top Rail",         PositionXPercent = 45, PositionYPercent = 12 },
@@ -142,6 +146,7 @@ public static class SeedData
             Manufacturer = "WE-Tech",
             WeightGrams = 2900,
             PriceEur = 279,
+            RealWidthMm = 840, // Gesamtlänge
             Slots =
             [
                 new Slot { AttachmentType = picatinny, Label = "Top Rail",         PositionXPercent = 45, PositionYPercent = 12 },
@@ -159,6 +164,7 @@ public static class SeedData
             Manufacturer = "ICS",
             WeightGrams = 2750,
             PriceEur = 389,
+            RealWidthMm = 700, // Gesamtlänge, kürzeres SBR-Layout
             Slots =
             [
                 new Slot { AttachmentType = picatinny, Label = "Top Rail",         PositionXPercent = 45, PositionYPercent = 12 },
@@ -177,6 +183,7 @@ public static class SeedData
             Manufacturer = "Tokyo Marui",
             WeightGrams = 910,
             PriceEur = 179,
+            RealWidthMm = 220, // Gesamtlänge
             Slots =
             [
                 new Slot { AttachmentType = picatinny, Label = "Underslung Rail",  PositionXPercent = 50, PositionYPercent = 72 },
@@ -190,6 +197,7 @@ public static class SeedData
             Manufacturer = "WE-Tech",
             WeightGrams = 780,
             PriceEur = 119,
+            RealWidthMm = 186, // Gesamtlänge, entspricht realer Glock 17
             Slots =
             [
                 new Slot { AttachmentType = picatinny, Label = "Underslung Rail",  PositionXPercent = 50, PositionYPercent = 72 },
@@ -204,6 +212,7 @@ public static class SeedData
             Manufacturer = "Aimpoint",
             WeightGrams = 420,
             PriceEur = 899,
+            RealWidthMm = 70,
             AcceptedAttachmentTypes = [picatinny]
         };
 
@@ -214,6 +223,7 @@ public static class SeedData
             Manufacturer = "EOTech",
             WeightGrams = 510,
             PriceEur = 649,
+            RealWidthMm = 140,
             AcceptedAttachmentTypes = [picatinny]
         };
 
@@ -224,6 +234,7 @@ public static class SeedData
             Manufacturer = "Vortex Optics",
             WeightGrams = 185,
             PriceEur = 179,
+            RealWidthMm = 85,
             AcceptedAttachmentTypes = [picatinny]
         };
 
@@ -234,6 +245,7 @@ public static class SeedData
             Manufacturer = "EOTech",
             WeightGrams = 370,
             PriceEur = 729,
+            RealWidthMm = 93,
             AcceptedAttachmentTypes = [picatinny]
         };
 
@@ -245,6 +257,7 @@ public static class SeedData
             Manufacturer = "Condor Outdoor",
             WeightGrams = 220,
             PriceEur = 28,
+            RealWidthMm = 180,
             AcceptedAttachmentTypes = [molle]
         };
 
@@ -255,6 +268,7 @@ public static class SeedData
             Manufacturer = "Warrior Assault Systems",
             WeightGrams = 180,
             PriceEur = 44,
+            RealWidthMm = 140,
             AcceptedAttachmentTypes = [molle]
         };
 
@@ -265,6 +279,7 @@ public static class SeedData
             Manufacturer = "Blue Force Gear",
             WeightGrams = 120,
             PriceEur = 64,
+            RealWidthMm = 80,
             SvgAssetPath = "/components/bfg-tenspeed.svg",
             AcceptedAttachmentTypes = [molle],
             // MountPoints aus Figma-Datei "M4 Pouch MVP" (Frame M4Pouch_MOPC_Front): eigene
@@ -289,6 +304,7 @@ public static class SeedData
             Manufacturer = "North American Rescue",
             WeightGrams = 340,
             PriceEur = 89,
+            RealWidthMm = 170,
             AcceptedAttachmentTypes = [molle]
         };
 
