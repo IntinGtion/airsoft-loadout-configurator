@@ -119,20 +119,6 @@ export function CanvasNode({
 
   return (
     <>
-      {/* Markers render before (so, underneath, in Konva's paint order) any attached
-          children below — otherwise a sibling slot occupied by another item's own
-          footprint (not its anchor) would draw its grey "occupied" dot on top of
-          that item's sprite instead of being hidden behind it. */}
-      {height != null &&
-        component.slots.map(slot => {
-          if (childItemsBySlotId.has(slot.id)) return null
-          const sx = x + (slot.positionXPercent / 100) * width
-          const sy = y + (slot.positionYPercent / 100) * height
-          return (
-            <SlotMarker key={slot.id} x={sx} y={sy} occupied={occupiedByItemId.has(slot.id)} />
-          )
-        })}
-
       {component.svgAssetPath && (
         <ComponentSprite
           url={component.svgAssetPath}
@@ -149,6 +135,21 @@ export function CanvasNode({
           onDragEnd={handleDragEnd}
         />
       )}
+
+      {/* Own slot markers render after (so, on top of, in Konva's paint order) this
+          node's own sprite — otherwise the base image would hide its own dots.
+          They still render before the children block below, so that an attached
+          child's sprite (rendered there) properly covers the grey "occupied" dots
+          for the rest of its own footprint instead of showing through them. */}
+      {height != null &&
+        component.slots.map(slot => {
+          if (childItemsBySlotId.has(slot.id)) return null
+          const sx = x + (slot.positionXPercent / 100) * width
+          const sy = y + (slot.positionYPercent / 100) * height
+          return (
+            <SlotMarker key={slot.id} x={sx} y={sy} occupied={occupiedByItemId.has(slot.id)} />
+          )
+        })}
 
       {selectedItemId === itemId && height != null && (
         <>
