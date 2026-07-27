@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Stage, Layer } from 'react-konva'
 import { api } from '../api'
 import type { ComponentResponse, LoadoutItemResponse, LoadoutResponse } from '../api/types'
-import { CanvasNode } from '../components/canvas/CanvasNode'
+import { useComponents } from '../hooks/useComponents'
+import { CategoryNav } from '../components/CategoryNav'
+import { CanvasNode, type DropCandidate } from '../components/canvas/CanvasNode'
 import styles from './CanvasView.module.css'
 
 const STAGE_WIDTH = 640
 const STAGE_HEIGHT = 720
 const ROOT_DISPLAY_WIDTH = 380
+const DROP_SNAP_DISTANCE = 26
 
 export function CanvasView() {
   const { id } = useParams<{ id: string }>()
@@ -16,14 +19,20 @@ export function CanvasView() {
 
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(null)
   const [componentsById, setComponentsById] = useState<Map<number, ComponentResponse>>(new Map())
-  const [allComponents, setAllComponents] = useState<ComponentResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedSlot, setSelectedSlot] = useState<{ slotId: number; attachmentTypeId: number } | null>(null)
+  const [dragOver, setDragOver] = useState(false)
 
-  useEffect(() => {
-    api.components.getAll().then(setAllComponents).catch(console.error)
+  const { categories, components: catalog, selected, setSelected } = useComponents()
+
+  // Absolute canvas positions of every currently rendered slot, keyed by slot ID —
+  // updated by CanvasNode as it computes layout, read once at drop time to find the
+  // nearest free slot under the cursor.
+  const slotPositions = useRef(new Map<number, DropCandidate>())
+
+  const handleSlotsComputed = useCallback((slots: DropCandidate[]) => {
+    slots.forEach(s => slotPositions.current.set(s.id, s))
   }, [])
 
   const reload = useCallback(() => {
@@ -58,22 +67,44 @@ export function CanvasView() {
     return map
   }, [loadout])
 
-  const compatibleComponents = useMemo(() => {
-    if (!selectedSlot) return []
-    return allComponents.filter(c =>
-      c.acceptedAttachmentTypes.some(a => a.id === selectedSlot.attachmentTypeId)
-    )
-  }, [selectedSlot, allComponents])
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    setDragOver(true)
+  }
 
-  async function handlePlace(componentId: number) {
-    if (!selectedSlot) return
+  async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setDragOver(false)
     setError(null)
+
+    const componentId = Number(e.dataTransfer.getData('text/component-id'))
+    if (!componentId) return
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const dropX = e.clientX - rect.left
+    const dropY = e.clientY - rect.top
+
+    let nearest: DropCandidate | null = null
+    let nearestDist = Infinity
+    for (const candidate of slotPositions.current.values()) {
+      if (candidate.occupied) continue
+      const dist = Math.hypot(candidate.x - dropX, candidate.y - dropY)
+      if (dist < nearestDist) {
+        nearestDist = dist
+        nearest = candidate
+      }
+    }
+
+    if (!nearest || nearestDist > DROP_SNAP_DISTANCE) {
+      setError('No attachment slot near where you dropped that.')
+      return
+    }
+
     try {
-      await api.loadouts.addItem(loadoutId, componentId, selectedSlot.slotId)
-      setSelectedSlot(null)
+      await api.loadouts.addItem(loadoutId, componentId, nearest.id)
       reload()
-    } catch (e) {
-      setError(String(e))
+    } catch (err) {
+      setError(String(err))
     }
   }
 
@@ -91,7 +122,7 @@ export function CanvasView() {
         <header className={styles.header}>
           <div>
             <h1 className={styles.title}>{loadout?.name ?? 'Canvas'}</h1>
-            <p className={styles.subtitle}>Click a highlighted slot to attach a compatible component</p>
+            <p className={styles.subtitle}>Drag a component from the catalog onto a highlighted slot</p>
           </div>
           <Link className={styles.backLink} to={`/loadout/${loadoutId}`}>Back to list view</Link>
         </header>
@@ -106,7 +137,12 @@ export function CanvasView() {
             <Link to={`/loadout/${loadoutId}`}>list view</Link> first.
           </div>
         ) : (
-          <div className={styles.stageWrap}>
+          <div
+            className={`${styles.stageWrap} ${dragOver ? styles.stageWrapDragOver : ''}`}
+            onDragOver={handleDragOver}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+          >
             <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
               <Layer>
                 {rootItems.map((item, i) => {
@@ -121,12 +157,7 @@ export function CanvasView() {
                       width={ROOT_DISPLAY_WIDTH}
                       componentsById={componentsById}
                       childItemsBySlotId={childItemsBySlotId}
-                      onSlotClick={(slotId, attachmentTypeId) =>
-                        setSelectedSlot(prev =>
-                          prev?.slotId === slotId ? null : { slotId, attachmentTypeId }
-                        )
-                      }
-                      selectedSlotId={selectedSlot?.slotId ?? null}
+                      onSlotsComputed={handleSlotsComputed}
                     />
                   )
                 })}
@@ -136,28 +167,26 @@ export function CanvasView() {
         )}
       </div>
 
-      {selectedSlot && (
-        <aside className={styles.picker}>
-          <div className={styles.pickerHeader}>
-            <h2 className={styles.pickerTitle}>Attach here</h2>
-            <button className={styles.pickerClose} onClick={() => setSelectedSlot(null)}>×</button>
-          </div>
-          {compatibleComponents.length === 0 ? (
-            <p className={styles.pickerEmpty}>No compatible components in the catalog.</p>
-          ) : (
-            <ul className={styles.pickerList}>
-              {compatibleComponents.map(c => (
-                <li key={c.id}>
-                  <button className={styles.pickerItem} onClick={() => handlePlace(c.id)}>
-                    <span className={styles.pickerItemName}>{c.name}</span>
-                    <span className={styles.pickerItemCategory}>{c.categoryName}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
-      )}
+      <aside className={styles.catalog}>
+        <CategoryNav categories={categories} selected={selected} onSelect={setSelected} />
+        <div className={styles.catalogListWrap}>
+          <h2 className={styles.catalogTitle}>Drag onto canvas</h2>
+          <ul className={styles.catalogList}>
+            {catalog.map(c => (
+              <li key={c.id}>
+                <div
+                  className={styles.catalogItem}
+                  draggable
+                  onDragStart={e => e.dataTransfer.setData('text/component-id', String(c.id))}
+                >
+                  <span className={styles.catalogItemName}>{c.name}</span>
+                  <span className={styles.catalogItemCategory}>{c.categoryName}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
     </div>
   )
 }

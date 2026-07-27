@@ -217,11 +217,14 @@ DELETE          /api/loadouts/{id}/items/{itemId}
 - [x] `LoadoutBuilder` — Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Items/Gesamtgewicht/-preis, Entfernen
 - [x] `LoadoutSwitcher` — Dropdown im Topbar, listet vorhandene Loadouts (sonst nach Verlassen der Seite nicht mehr auffindbar)
 - [x] **Canvas-Grundgerüst** (`react-konva` + `konva` + `use-image` installiert) — neue Route `/loadout/:id/canvas` (`CanvasView`), siehe Abschnitt 1 + 3 für die Kernvision:
-  - Basis-Komponente (`parentSlotId === null`) wird als SVG-Sprite gerendert (`ComponentSprite`), ihre `Slot`s als klickbare Marker (`SlotMarker`) an den echten Prozent-Positionen
+  - Basis-Komponente (`parentSlotId === null`) wird als SVG-Sprite gerendert (`ComponentSprite`), ihre `Slot`s als Marker (`SlotMarker`) an den echten Prozent-Positionen
   - Rekursion: bereits angehängte Kind-Items werden automatisch an der Pixel-Position ihres Parent-Slots gerendert und zeigen wiederum ihre eigenen Slots (`CanvasNode`, rekursiv) — funktioniert beliebig tief, ungetestet über 2 Ebenen hinaus
-  - Interaktion aktuell **Klick-zu-Platzieren** (freien Slot anklicken → Liste kompatibler Komponenten nach `AcceptedAttachmentTypes` → auswählen), noch **kein Drag & Drop** — das ist der nächste Schritt, siehe Abschnitt 7
+  - Footprint-Belegung (Abschnitt 3) ist visuell gespiegelt: von einer mehrpunktigen Komponente belegte Slots sind ausgegraut, nicht nur der Anker-Slot
   - Kind-Komponenten werden aktuell in fester Pixelgröße gerendert (`CHILD_DISPLAY_WIDTH` in `CanvasNode.tsx`), da verschiedene Figma-Assets noch nicht auf einen gemeinsamen realen Maßstab bezogen sind
-  - End-to-end mit Playwright verifiziert: Condor MOPC platziert, Canvas geöffnet, MOLLE-Slot angeklickt, BFG Ten-Speed Pouch angehängt — rendert korrekt an der Slot-Position, keine Konsolenfehler
+- [x] **Drag & Drop** ✅ erledigt (2026-07-27) — Klick-zu-Platzieren komplett ersetzt: `CanvasView` hat jetzt ein persistentes Katalog-Panel (`CategoryNav` + ziehbare Komponenten-Karten, natives HTML5-Drag), das per Drop auf die Konva-Stage die nächstgelegene freie Slot-Position trifft
+  - `CanvasNode` meldet die absoluten Pixel-Positionen aller (auch verschachtelten) Slots per `onSlotsComputed`-Callback nach oben an `CanvasView`, das darüber die nächstgelegene freie Slot-ID zum Drop-Punkt sucht (kein Konva-Hit-Testing nötig, robuster gegenüber der kleinen Klickfläche der Slot-Punkte)
+  - Fehlerfälle geben verständliches Feedback: kein Slot in Reichweite ("No attachment slot near where you dropped that") bzw. die 422-Fehlermeldung vom Server bei Typ-/Footprint-Mismatch
+  - End-to-end mit Playwright verifiziert: erfolgreiche Platzierung, Drop ohne nahen Slot, Drop einer inkompatiblen Komponente — alle drei Fälle verhalten sich korrekt, keine Konsolenfehler
 
 ---
 
@@ -322,10 +325,11 @@ Browser öffnen: **http://localhost:5173**
 War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen, Komponenten per `+`-Button hinzufügen, Sidebar mit Gesamtgewicht/-preis, Entfernen, Loadout-Switcher im Topbar. Details siehe Abschnitt 4.
 
 ### Mittelfristig — Canvas-Konfigurator (**das ist die eigentliche Kernfunktion**, siehe Abschnitt 1 + 3 "Layered-Rendering-Konzept")
-- `react-konva` installiert, Grundgerüst mit Klick-zu-Platzieren steht ✅ erledigt (2026-07-27), siehe Abschnitt 4 "Frontend"
+- `react-konva` installiert, Grundgerüst steht ✅ erledigt (2026-07-27), siehe Abschnitt 4 "Frontend"
 - Server-seitige **Footprint-Match-Logik** ✅ erledigt (2026-07-27), siehe Abschnitt 3 "Footprint-Matching" — Grid-basiert (`GridColumn/GridRow`), bewusst ohne Toleranz-Problematik, da unabhängig vom Prozent-/Pixel-Rendering
-- **Footprint-Belegung visuell im Canvas** ✅ erledigt (2026-07-27) — belegte Nicht-Anker-Slots werden jetzt ausgegraut und sind nicht mehr klickbar, siehe Abschnitt 3
-- **Drag & Drop** statt Klick-zu-Platzieren: Komponenten aus einer Katalog-Liste auf freie Slots ziehen
+- **Footprint-Belegung visuell im Canvas** ✅ erledigt (2026-07-27) — belegte Nicht-Anker-Slots werden jetzt ausgegraut, siehe Abschnitt 3
+- **Drag & Drop** ✅ erledigt (2026-07-27) — Klick-zu-Platzieren abgelöst, siehe Abschnitt 4 "Frontend"
+- Live-Hervorhebung des nächstgelegenen Drop-Ziels **während** des Ziehens (aktuell nur Rahmen-Highlight auf der ganzen Stage, kein Slot-genaues Feedback vor dem Loslassen)
 - Rekursion über mehr als 2 Ebenen testen (z.B. Optik auf Rail auf Gewehr) — bisher nur Plattenträger→Pouch verifiziert
 - Gemeinsamer Maßstab zwischen Assets verschiedener Figma-Dateien (aktuell rendert jede Kind-Komponente in fester Pixelgröße, siehe Abschnitt 4). Wichtig laut Projektinhaber: Positionen werden zwischen Assets nie exakt übereinstimmen, sobald das angegangen wird braucht das Matching/Rendering eine Toleranzschwelle — das Footprint-Matching selbst umgeht dieses Problem bereits über Rasterkoordinaten (Abschnitt 3), betrifft also nur noch das visuelle Rendering
 - Colorway-Umschalter (Einfärben der Silhouetten per Fill, siehe Abschnitt 3) — beantwortet die "passt der Tan-Ton"-Frage, die der eigentliche Anlass für dieses Projekt war
@@ -339,4 +343,4 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-27 — Footprint-Matching jetzt Ende-zu-Ende: server-seitige Validierung (Abschnitt 3, grid-basiert statt prozent-/pixelbasiert, umgeht die offene Maßstabs-/Toleranz-Frage aus Abschnitt 7) UND dieselbe Logik im Canvas gespiegelt, sodass belegte Slots einer mehrpunktigen Komponente (nicht nur der Anker) visuell ausgegraut und nicht klickbar sind. Damit beantwortet der Konfigurator jetzt wirklich die "passt das überhaupt drauf"-Frage aus Abschnitt 1, nicht nur auf Typ-Ebene. Offen: Drag & Drop, gemeinsamer Asset-Maßstab, weitere Assets.*
+*Zuletzt aktualisiert: 2026-07-27 — Drag & Drop im Canvas: Klick-zu-Platzieren durch ein persistentes Katalog-Panel (Kategoriefilter + ziehbare Karten) ersetzt, das per nächstgelegener freier Slot-Position andockt. Damit sind Footprint-Matching (server-seitig + visuell) und Drag & Drop beide fertig — der Canvas-Konfigurator fühlt sich jetzt wie das eigentliche Produkt aus Abschnitt 1 an, nicht mehr wie ein Grundgerüst. Offen: Live-Hervorhebung des Drop-Ziels während des Ziehens, gemeinsamer Asset-Maßstab, weitere Assets/Kategorien.*

@@ -1,10 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ComponentResponse, LoadoutItemResponse } from '../../api/types'
 import { ComponentSprite } from './ComponentSprite'
 import { SlotMarker } from './SlotMarker'
 import { computeFootprintSlotIds } from './footprint'
 
 export const CHILD_DISPLAY_WIDTH = 64
+
+export interface DropCandidate {
+  id: number
+  attachmentTypeId: number
+  x: number
+  y: number
+  occupied: boolean
+}
 
 interface Props {
   component: ComponentResponse
@@ -13,8 +21,7 @@ interface Props {
   width: number
   componentsById: Map<number, ComponentResponse>
   childItemsBySlotId: Map<number, LoadoutItemResponse>
-  onSlotClick: (slotId: number, attachmentTypeId: number) => void
-  selectedSlotId: number | null
+  onSlotsComputed: (slots: DropCandidate[]) => void
 }
 
 export function CanvasNode({
@@ -24,15 +31,14 @@ export function CanvasNode({
   width,
   componentsById,
   childItemsBySlotId,
-  onSlotClick,
-  selectedSlotId,
+  onSlotsComputed,
 }: Props) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const height = naturalSize ? width * (naturalSize.h / naturalSize.w) : null
 
   // Slots consumed by a placed component's own footprint (e.g. the other 7 slots
   // under a 2x4-MOLLE pouch), not just the one slot it's directly anchored to —
-  // these must render as occupied too, not as free/clickable markers.
+  // these must count as occupied too, not as free drop targets.
   const occupiedSlotIds = useMemo(() => {
     const occupied = new Set<number>()
     for (const slot of component.slots) {
@@ -45,6 +51,20 @@ export function CanvasNode({
     }
     return occupied
   }, [component, childItemsBySlotId, componentsById])
+
+  useEffect(() => {
+    if (height == null) return
+    onSlotsComputed(
+      component.slots.map(slot => ({
+        id: slot.id,
+        attachmentTypeId: slot.attachmentTypeId,
+        x: x + (slot.positionXPercent / 100) * width,
+        y: y + (slot.positionYPercent / 100) * height,
+        occupied: occupiedSlotIds.has(slot.id) || childItemsBySlotId.has(slot.id),
+      }))
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [component, x, y, width, height, occupiedSlotIds])
 
   return (
     <>
@@ -76,22 +96,13 @@ export function CanvasNode({
                 width={CHILD_DISPLAY_WIDTH}
                 componentsById={componentsById}
                 childItemsBySlotId={childItemsBySlotId}
-                onSlotClick={onSlotClick}
-                selectedSlotId={selectedSlotId}
+                onSlotsComputed={onSlotsComputed}
               />
             )
           }
 
-          const isOccupied = occupiedSlotIds.has(slot.id)
           return (
-            <SlotMarker
-              key={slot.id}
-              x={sx}
-              y={sy}
-              occupied={isOccupied}
-              selected={selectedSlotId === slot.id}
-              onClick={isOccupied ? undefined : () => onSlotClick(slot.id, slot.attachmentTypeId)}
-            />
+            <SlotMarker key={slot.id} x={sx} y={sy} occupied={occupiedSlotIds.has(slot.id)} />
           )
         })}
     </>
