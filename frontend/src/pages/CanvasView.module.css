@@ -217,6 +217,20 @@
 
 .dragGhostImageWrap {
   position: absolute;
+  border-radius: 6px;
+}
+
+/* The Konva-rendered slot highlight sits underneath this ghost (an ordinary
+   HTML overlay drawn on top of the canvas to follow the cursor), so it's
+   invisible in the one moment it matters — right before the drop. Glowing
+   the ghost itself instead means the compatibility signal is never occluded
+   by the very item it's about. */
+.dragGhostImageWrapCompatible {
+  box-shadow: 0 0 0 3px #22d3ee, 0 0 18px 5px rgba(34, 211, 238, 0.55);
+}
+
+.dragGhostImageWrapIncompatible {
+  box-shadow: 0 0 0 3px #f87171, 0 0 18px 5px rgba(248, 113, 113, 0.55);
 }
 
 .dragGhostImage {

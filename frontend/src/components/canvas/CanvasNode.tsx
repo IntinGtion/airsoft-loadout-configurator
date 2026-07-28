@@ -42,6 +42,11 @@ interface Props {
   onSelectItem: (itemId: number | null) => void
   onDeleteItem: (itemId: number) => void
   onItemDragEnd: (itemId: number, componentId: number, anchorStageX: number, anchorStageY: number) => void
+  // The slot currently nearest the cursor during a catalog drag, and whether
+  // the dragged component would actually be accepted there — null/false when
+  // nothing is being dragged or the cursor isn't near any slot.
+  hoveredSlotId: number | null
+  hoveredSlotCompatible: boolean
 }
 
 export function CanvasNode({
@@ -59,6 +64,8 @@ export function CanvasNode({
   onSelectItem,
   onDeleteItem,
   onItemDragEnd,
+  hoveredSlotId,
+  hoveredSlotCompatible,
 }: Props) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const height = naturalSize ? width * (naturalSize.h / naturalSize.w) : null
@@ -146,8 +153,9 @@ export function CanvasNode({
           if (childItemsBySlotId.has(slot.id)) return null
           const sx = x + (slot.positionXPercent / 100) * width
           const sy = y + (slot.positionYPercent / 100) * height
+          const hover = slot.id === hoveredSlotId ? (hoveredSlotCompatible ? 'compatible' : 'incompatible') : null
           return (
-            <SlotMarker key={slot.id} x={sx} y={sy} occupied={occupiedByItemId.has(slot.id)} />
+            <SlotMarker key={slot.id} x={sx} y={sy} occupied={occupiedByItemId.has(slot.id)} hover={hover} />
           )
         })}
 
@@ -198,6 +206,8 @@ export function CanvasNode({
               onSelectItem={onSelectItem}
               onDeleteItem={onDeleteItem}
               onItemDragEnd={onItemDragEnd}
+              hoveredSlotId={hoveredSlotId}
+              hoveredSlotCompatible={hoveredSlotCompatible}
             />
           )
         })}

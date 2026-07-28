@@ -45,6 +45,10 @@ export function CanvasView() {
   const [dragging, setDragging] = useState<DraggingItem | null>(null)
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  // The slot nearest the cursor while dragging a catalog item, so it can be
+  // highlighted before the user commits to dropping there — avoids the old
+  // guess-and-check cycle where a miss only surfaced as an error afterwards.
+  const [hoveredSlot, setHoveredSlot] = useState<{ id: number; compatible: boolean } | null>(null)
   const stageWrapRef = useRef<HTMLDivElement | null>(null)
 
   const { categories, components: catalog, selected, setSelected } = useComponents()
@@ -209,9 +213,35 @@ export function CanvasView() {
       return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
     }
 
+    function findNearestFreeSlot(stageX: number, stageY: number): DropCandidate | null {
+      let nearest: DropCandidate | null = null
+      let nearestDist = Infinity
+      for (const candidate of slotPositions.current.values()) {
+        if (candidate.occupiedByItemId != null) continue
+        const dist = Math.hypot(candidate.x - stageX, candidate.y - stageY)
+        if (dist < nearestDist) {
+          nearestDist = dist
+          nearest = candidate
+        }
+      }
+      return nearest && nearestDist <= DROP_SNAP_DISTANCE ? nearest : null
+    }
+
     function handleMove(e: MouseEvent) {
       setDragPos({ x: e.clientX, y: e.clientY })
-      setDragOver(isOverStage(e.clientX, e.clientY))
+      const rect = stageWrapRef.current?.getBoundingClientRect()
+      const over = isOverStage(e.clientX, e.clientY)
+      setDragOver(over)
+
+      const nearest = over && rect ? findNearestFreeSlot(e.clientX - rect.left, e.clientY - rect.top) : null
+      if (!nearest) {
+        setHoveredSlot(null)
+        return
+      }
+      const compatible = draggingComponent?.acceptedAttachmentTypes.some(
+        t => t.id === nearest.attachmentTypeId
+      ) ?? false
+      setHoveredSlot({ id: nearest.id, compatible })
     }
 
     function handleUp(e: MouseEvent) {
@@ -221,6 +251,7 @@ export function CanvasView() {
       setDragging(null)
       setDragPos(null)
       setDragOver(false)
+      setHoveredSlot(null)
 
       if (dropInStage && rect && dragging) {
         placeComponent(dragging.componentId, e.clientX - rect.left, e.clientY - rect.top)
@@ -233,7 +264,7 @@ export function CanvasView() {
       window.removeEventListener('mousemove', handleMove)
       window.removeEventListener('mouseup', handleUp)
     }
-  }, [dragging, placeComponent])
+  }, [dragging, placeComponent, draggingComponent])
 
   // Anchor the ghost preview on the component's own anchor mount point (not its
   // top-left corner or visual center) so the cursor sits exactly where it would
@@ -329,6 +360,8 @@ export function CanvasView() {
                       onSelectItem={setSelectedItemId}
                       onDeleteItem={handleRemoveItem}
                       onItemDragEnd={moveExistingItem}
+                      hoveredSlotId={hoveredSlot?.id ?? null}
+                      hoveredSlotCompatible={hoveredSlot?.compatible ?? false}
                     />
                   )
                 })}
@@ -364,7 +397,13 @@ export function CanvasView() {
         <div className={styles.dragGhost} style={{ left: dragPos.x, top: dragPos.y }}>
           {dragPreviewUrl && (
             <div
-              className={styles.dragGhostImageWrap}
+              className={`${styles.dragGhostImageWrap} ${
+                hoveredSlot
+                  ? hoveredSlot.compatible
+                    ? styles.dragGhostImageWrapCompatible
+                    : styles.dragGhostImageWrapIncompatible
+                  : ''
+              }`}
               style={{ left: -dragOffsetX, top: -dragOffsetY, width: dragPreviewWidth }}
             >
               <img
