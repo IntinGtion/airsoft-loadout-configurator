@@ -40,10 +40,19 @@ public static class SeedData
         // 52 MOLLE slots in a 4-wide chest area (rows 1-4) + 6-wide torso area (rows 5-10).
         // Marker naming on this asset is "MOLLE_Slot{col}_Row{row}" (note: reversed order
         // vs. the "Slot{col}_MOLLE_Row{row}" convention used on Condor MOPC).
+        //
+        // RealWidthMm derived from the MOLLE grid pitch itself (see DEVELOPMENT.md section 3
+        // "Gemeinsamer Maßstab") rather than guessed from a spec sheet: real PALS/MOLLE webbing
+        // has a standardized spacing (~25.4mm row-to-row, ~38.1mm slot-to-slot within a row).
+        // Measuring this asset's own pixel pitch against that constant gives column-pitch-based
+        // ≈381mm and row-pitch-based ≈403mm (excluding the non-MOLLE gap between the chest and
+        // torso zones); averaged ≈392mm. The two estimates disagree by ~5%, expected since this
+        // artwork is hand-traced from a reference image, not precisely measured.
         var jpcTemplate = new ComponentTemplate
         {
             Name = "JPC Plate Carrier",
             SvgAssetPath = "/components/jpc-plate-carrier.svg",
+            RealWidthMm = 392,
             Slots =
             [
                 new Slot { AttachmentType = molle, Label = "MOLLE 1-1", PositionXPercent = 35.17f, PositionYPercent = 32.2f, GridColumn = 1, GridRow = 1 },
@@ -108,10 +117,13 @@ public static class SeedData
         };
 
         // ── Pouch ────────────────────────────────────────────────────────────
+        // RealWidthMm derived the same MOLLE-grid-pitch way as the plate carrier above:
+        // column-pitch-based ≈84mm, row-pitch-based ≈83mm — close agreement here since
+        // this grid has no zone gap like the plate carrier's chest/torso split.
         var openFastMagPouchTemplate = new ComponentTemplate
         {
             Name = "Open Fast Mag Pouch",
-            RealWidthMm = 80,
+            RealWidthMm = 84,
             SvgAssetPath = "/components/open-fast-mag-pouch.svg",
             AcceptedAttachmentTypes = [molle],
             // MountPoints aus Figma-Datei "M4 Pouch MVP": eigene MOLLE-Straps auf der
