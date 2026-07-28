@@ -153,15 +153,18 @@ Das "Maßstab"-Thema hat zwei unabhängige Teile:
 
 Für Teil 1 wurde `Component.RealWidthMm` eingeführt (reales Referenzmaß in mm, für alle 16 Seed-Komponenten mit ungefähren, öffentlich bekannten Produktmaßen befüllt — bei Plattenträgern die Frontpanel-Breite, bei Gewehren/Pistolen die Gesamtlänge als visuell dominante Ausdehnung, bei Optiken/Taschen die Breite). `frontend/src/components/canvas/scale.ts` rechnet das über eine feste `PX_PER_MM`-Konstante (kalibriert auf den Condor MOPC, damit sich die bisherige Canvas-Größe nicht sprunghaft ändert) in eine Anzeigebreite um — sowohl für Root-Komponenten (`CanvasView`) als auch für rekursiv angehängte Kind-Komponenten (`CanvasNode`, ersetzt die bisher fixe `CHILD_DISPLAY_WIDTH`). Komponenten ohne `RealWidthMm` fallen auf die alten festen Pixelwerte zurück. Sichtbarer Effekt: die BFG Ten-Speed Pouch (80mm, 2 MOLLE-Spalten breit) rendert jetzt satt größer als vorher und deckt visuell ungefähr die zwei Spalten ab, die sie laut Footprint auch tatsächlich belegt — vorher war sie durch die feste 64px-Größe künstlich zu klein. Mit Playwright verifiziert.
 
-### Seed-Daten (16 Produkte)
+### Seed-Daten (2 echte Produkte) ✅ aufgeräumt (2026-07-28)
 
-| Kategorie | Produkte |
-|---|---|
-| Plate Carrier | Crye JPC 2.0, Ferro FCPC V5, Condor MOPC |
-| Rifle | TM MWS GBBR, WE-Tech M4, ICS CXP-UK1 |
-| Pistol | TM Hi-Capa 5.1, WE G17 Gen4 |
-| Optic | Aimpoint T2, EOTech 553, EOTech XPS3, Vortex Crossfire |
-| Pouch | Condor Admin Pouch, WAS Double Mag Pouch, BFG Ten-Speed, NAR IFAK |
+Die bisherigen 16 Seed-Komponenten waren größtenteils geratene Platzhalter ohne echtes Asset (falsche/erfundene Gewichte, Preise, Hersteller). Auf Wunsch des Projektinhabers komplett geleert und durch nur die Einträge ersetzt, die ein echtes, aus Figma stammendes Asset haben:
+
+| Kategorie | Produkt | Status |
+|---|---|---|
+| Plate Carrier | JPC Plate Carrier | generisches Template für leichte Plattenträger, SVG + 52 MOLLE-Slots vorhanden, Name/Manufacturer/Gewicht/Preis bewusst generisch (kein reales Produkt dahinter) |
+| Pouch | Open Fast Mag Pouch | generisches Template für offene Fast-Mag-artige Pouches (vormals "BFG Ten-Speed M4 Pouch" — Asset, MountPoints und Grid-Daten unverändert, nur Name/Datei/Produktdaten generalisiert) |
+
+`Category`- und `AttachmentType`-Stammdaten (Plate Carrier/Rifle/Pistol/Optic/Pouch bzw. MOLLE/Picatinny/M-LOK/QD-Sling) bleiben bewusst vollständig erhalten, auch ohne Produkte in jeder Kategorie — das ist Taxonomie, kein Platzhalter, und wird für künftige echte Assets wieder gebraucht.
+
+`Component.Manufacturer` ist dabei von `required string` auf `string?` umgestellt worden (Migration `MakeManufacturerOptional`), da generische Templates keinen Hersteller haben. `WeightGrams`/`PriceEur` waren schon vorher nullable.
 
 ---
 
@@ -170,7 +173,7 @@ Für Teil 1 wurde `Component.RealWidthMm` eingeführt (reales Referenzmaß in mm
 ### Backend (vollständig)
 
 - [x] EF Core Datenbankschema mit Auto-Migration beim Start
-- [x] Auto-Seed mit 16 echten Produkten (idempotent — läuft nicht doppelt)
+- [x] Auto-Seed mit echten Produkten (idempotent — läuft nicht doppelt); seit 2026-07-28 bewusst auf 2 Einträge reduziert, siehe Abschnitt 3 "Seed-Daten"
 - [x] CRUD-Endpunkte für: `Categories`, `Components`, `AttachmentTypes`, `Slots`, `Loadouts`
 - [x] Loadout-Items: hinzufügen, entfernen, mit Kompatibilitätsprüfung (422 bei Mismatch)
 - [x] Share-Token: `GET /api/loadouts/share/{guid}` — öffentlicher Lesezugriff
@@ -208,15 +211,20 @@ DELETE          /api/loadouts/{id}/items/{itemId}
 - [x] `SeedData.cs`: Condor MOPC hat jetzt `SvgAssetPath` gesetzt und alle 36 echten Slot-Koordinaten (in % relativ zur Figma-Frame-BoundingBox) statt der bisherigen Platzhalter-Werte
 - [x] Visuell verifiziert (Silhouette + Slot-Punkte deckungsgleich)
 - [x] Zweites Asset: "BFG Ten-Speed M4 Pouch" aus eigener Figma-Datei "M4 Pouch MVP" (eigener File-Key) — hat KEINE eigenen `Slot`s, sondern 8 `MountPoint`s (2×4 MOLLE-Straps, mit denen sie sich selbst am Plattenträger befestigt); dafür wurde die neue `MountPoint`-Entität eingeführt (Model, Migration `AddMountPoints`, DTO, Controller, Frontend-Types), siehe Abschnitt 3 für die Modellierung
-- [x] SVG unter `frontend/public/components/bfg-tenspeed.svg`, visuell verifiziert
+- [x] SVG war unter `frontend/public/components/bfg-tenspeed.svg`, visuell verifiziert — am 2026-07-28 zu `open-fast-mag-pouch.svg` umbenannt (siehe unten, Produkt generalisiert)
+- [x] Drittes Asset ✅ (2026-07-28): "JPC Plate Carrier" aus Figma-Datei `Oj2mnCJzmOD1h7D7LnkNZo` — generisches Template für leichte Plattenträger, 52 MOLLE-Slots (4 Spalten × Reihen 1-4 im Brustbereich, 6 Spalten × Reihen 5-10 im Torso). Marker-Namenskonvention auf diesem Asset ist `MOLLE_Slot{Spalte}_Row{Reihe}` (Reihenfolge vertauscht ggü. Condor MOPCs `Slot{Spalte}_MOLLE_Row{Reihe}`) — Namenskonvention ist also **nicht** projektweit fix, beim nächsten Asset immer den tatsächlichen Namen im Figma-Baum prüfen statt das alte Muster anzunehmen. SVG unter `frontend/public/components/jpc-plate-carrier.svg`, visuell verifiziert (alle 52 Punkte sitzen sauber auf den MOLLE-Reihen)
 
-**Workflow für weitere Assets (Rezept):**
-1. Attachment-Points in Figma als eigene benannte Ellipsen/Frames auf der Silhouette platzieren (Namenskonvention wie oben)
+**Wichtige Lektion 2026-07-28 — Figma-API-Kontingent:** Der Figma-Account läuft auf dem **Starter-Plan** (`x-figma-plan-tier: starter`, `x-figma-rate-limit-type: low`). Nach den Abrufen für die ersten beiden Assets war das Kontingent für die `/v1/images`-Bildexport-Route so weit aufgebraucht, dass ein 429 mit `Retry-After: 311838` (**~3,5 Tage**!) zurückkam — kein normales Minuten-Limit, sondern ein mehrtägiges Kontingent-Fenster. Entscheidung des Projektinhabers: **die REST-API wird künftig nur noch für `GET /v1/files/{file_key}` (Koordinaten/Namen der Marker-Ellipsen) benutzt** — das kostet spürbar weniger Kontingent als der Bildexport. Das eigentliche SVG exportiert der Projektinhaber ab jetzt **manuell aus der Figma-App** (Artwork-Layer markieren → Rechtsklick → "Copy as SVG" bzw. Export-Panel) und legt die Datei direkt unter `frontend/public/components/` ab.
+
+**Gotcha beim manuellen Export:** Das aus der Figma-App exportierte SVG enthält die Marker-Ellipsen mit, gefüllt in derselben Farbe wie die Silhouette (`fill="#D9D9D9"` o.ä.) — nicht transparent, nicht weggelassen. Vor dem Einsatz als `SvgAssetPath` müssen alle `<ellipse ...>`-Tags aus der Datei entfernt werden (sonst zeichnet die App eigene interaktive `SlotMarker`-Punkte UND die eingebrannten Marker-Ellipsen übereinander). Die Koordinaten zur Slot-Erstellung kommen weiterhin aus dem JSON-Abruf (Namen + `absoluteBoundingBox` je Ellipse), nicht aus dem bereinigten SVG.
+
+**Workflow für weitere Assets (aktualisiertes Rezept):**
+1. Attachment-Points in Figma als eigene benannte Ellipsen/Frames auf der Silhouette platzieren — Namenskonvention diesmal im Figma-Baum prüfen, nicht als projektweit fix annehmen (siehe Lektion oben)
 2. Vorab klären: bietet die Komponente diese Punkte an (→ `Slot`, z.B. Plattenträger, Rail) oder befestigt sie sich selbst damit an einem Parent (→ `MountPoint`, z.B. Tasche, Optik)? Beides kann auch gleichzeitig vorkommen (z.B. eine Rail hat MountPoints zum Gewehr UND eigene Slots für eine Optik)
-3. Datei per `GET /v1/files/{file_key}` abrufen, Node-IDs der Artwork-Layer und der Marker-Gruppe identifizieren
-4. Artwork-Layer einzeln per `GET /v1/images/{file_key}?ids=...&format=svg` exportieren, Marker-Gruppe NICHT mit-exportieren
-5. Layer-Offsets relativ zur Basis-Frame-BoundingBox berechnen, in ein kombiniertes SVG zusammensetzen
-6. Marker-Ellipsen-Zentren relativ zur Frame-BoundingBox in Prozent umrechnen → `Slot.PositionXPercent/Y` bzw. `MountPoint.PositionXPercent/Y`
+3. Datei **nur** per `GET /v1/files/{file_key}` abrufen (kein `/v1/images`-Aufruf mehr!), Marker-Ellipsen-Namen + `absoluteBoundingBox` sowie die Bounding-Box der Basis-Silhouette (Frame oder Haupt-Vektor) einsammeln
+4. Projektinhaber exportiert die Artwork-Layer manuell aus der Figma-App als SVG und legt die Datei unter `frontend/public/components/` ab
+5. Marker-Ellipsen aus der exportierten SVG-Datei entfernen (`<ellipse ...>`-Tags, siehe Gotcha oben)
+6. Marker-Ellipsen-Zentren relativ zur Basis-Bounding-Box in Prozent umrechnen (idealerweise gegen das tatsächliche `viewBox` der exportierten SVG, nicht die rohen Figma-Koordinaten, wegen Rundungsdifferenzen beim Export) → `Slot.PositionXPercent/Y` bzw. `MountPoint.PositionXPercent/Y`
 7. `SvgAssetPath` + Slots/MountPoints im `SeedData.cs` eintragen, DB-Dateien löschen und neu seeden lassen
 
 ### Frontend (Grundgerüst + Nebenfunktion "Loadout-Liste")
@@ -378,4 +386,6 @@ Direkt danach beim ersten eigenen Test des Projektinhabers im echten Browser gef
 
 **Zweiter Nachtrag:** Feedback nach dem ersten funktionierenden Test: Anker-Konnektor sollte immer exakt unter dem Mauszeiger sitzen (nicht die Bildmitte), alle Konnektoren der gezogenen Komponente sollten sichtbar sein, und nach dem Ablegen sollten wirklich alle belegten Slots ausgeblendet werden, nicht nur einer. Der letzte Punkt entpuppte sich als echter Rendering-Bug: `CanvasNode` zentrierte angehängte Kind-Sprites bisher einfach auf dem Parent-Slot, unabhängig davon, wo der Anker-Mountpoint tatsächlich innerhalb der eigenen Silhouette liegt (bei der BFG-Pouch z.B. oben links, nicht mittig) — dadurch stimmten Bildposition und die (korrekt berechneten) belegten Slots nicht überein. Jetzt löst `CanvasNode` seine Render-Position aus `targetX/targetY` (Zielpunkt) + `anchorPercent` (wo der Anker innerhalb der eigenen SVG liegt) zurück; Root-Items nutzen `anchorPercent={0,0}`, was sich exakt wie vorher verhält. Der Drag-Ghost nutzt dieselbe Logik und zeigt zusätzlich alle eigenen Mountpoints der gezogenen Komponente als Punkte an. Mit Playwright verifiziert.
 
-**Nachtrag 2026-07-28 — `ComponentTemplate` eingeführt:** Nach einer Architektur-Diskussion des Projektinhabers mit Claude Desktop (unabhängig von dieser Session, daher auf Aktualität geprüft statt blind übernommen) wurde `ComponentTemplate` als eigene Entity eingeführt, um Visuals/Formdaten (`SvgAssetPath`, `RealWidthMm`, `Slot[]`, `MountPoint[]`, `AcceptedAttachmentTypes[]`) von den Produktdaten (`Component`: Name, Manufacturer, WeightGrams, PriceEur) zu trennen — Motivation: mehrere Hersteller können optisch identische Klone verkaufen, die künftig ein Template teilen sollen, statt Formdaten pro Produkt zu duplizieren. Details, Datenmodell-Diagramm und Begründung siehe Abschnitt 3. Die öffentliche `ComponentResponse`-API-Form wurde bewusst unverändert (flach) gelassen, wodurch das Frontend ohne jede Codeänderung weiterlief — per Playwright-Smoketest verifiziert (Plattenträger + Pouch platzieren, verschieben, Footprint-Konflikt auslösen; alles wie vor der Migration). Migration `IntroduceComponentTemplates` erzeugt einen nicht datenerhaltenden FK-Umbau (`Slot`/`MountPoint` zeigen jetzt auf `ComponentTemplateId` statt `ComponentId`); da SeedData Katalogdaten nur bei leerer DB neu anlegt, wurde die lokale `loadout.db` bewusst gelöscht statt eine Custom-Datenmigration zu schreiben — reine Dev-Wegwerfdaten, kein produktiver Bestand betroffen.*
+**Nachtrag 2026-07-28 — `ComponentTemplate` eingeführt:** Nach einer Architektur-Diskussion des Projektinhabers mit Claude Desktop (unabhängig von dieser Session, daher auf Aktualität geprüft statt blind übernommen) wurde `ComponentTemplate` als eigene Entity eingeführt, um Visuals/Formdaten (`SvgAssetPath`, `RealWidthMm`, `Slot[]`, `MountPoint[]`, `AcceptedAttachmentTypes[]`) von den Produktdaten (`Component`: Name, Manufacturer, WeightGrams, PriceEur) zu trennen — Motivation: mehrere Hersteller können optisch identische Klone verkaufen, die künftig ein Template teilen sollen, statt Formdaten pro Produkt zu duplizieren. Details, Datenmodell-Diagramm und Begründung siehe Abschnitt 3. Die öffentliche `ComponentResponse`-API-Form wurde bewusst unverändert (flach) gelassen, wodurch das Frontend ohne jede Codeänderung weiterlief — per Playwright-Smoketest verifiziert (Plattenträger + Pouch platzieren, verschieben, Footprint-Konflikt auslösen; alles wie vor der Migration). Migration `IntroduceComponentTemplates` erzeugt einen nicht datenerhaltenden FK-Umbau (`Slot`/`MountPoint` zeigen jetzt auf `ComponentTemplateId` statt `ComponentId`); da SeedData Katalogdaten nur bei leerer DB neu anlegt, wurde die lokale `loadout.db` bewusst gelöscht statt eine Custom-Datenmigration zu schreiben — reine Dev-Wegwerfdaten, kein produktiver Bestand betroffen.
+
+**Nachtrag 2026-07-28 — Katalog aufgeräumt + drittes echtes Asset:** Direkt im Anschluss an die `ComponentTemplate`-Einführung (praktischer Anwendungsfall kam prompt: der Projektinhaber hatte parallel ein neues Figma-Asset für einen generischen leichten Plattenträger gebaut) wurden auf Wunsch des Projektinhabers alle 16 Seed-Komponenten gelöscht — die meisten waren geratene Platzhalter ohne echtes Asset. Übrig/neu: `JPC Plate Carrier` (neues Asset, siehe Abschnitt 4 "Assets") und die vormalige `BFG Ten-Speed M4 Pouch`, umbenannt zu `Open Fast Mag Pouch` und generalisiert (Datei `bfg-tenspeed.svg` → `open-fast-mag-pouch.svg`, Manufacturer/Gewicht/Preis auf null, da beide jetzt generische Templates statt konkreter Produkte sind). `Component.Manufacturer` wurde dafür nullable gemacht (Migration `MakeManufacturerOptional`). Categories/AttachmentTypes bleiben als Stammdaten erhalten. Dabei auch die wichtige Figma-API-Kontingent-Lektion gelernt (Starter-Plan, mehrtägiges Rate-Limit auf den Bildexport) — Workflow entsprechend angepasst, siehe Abschnitt 4 "Assets". Mit Playwright verifiziert: neuer Plattenträger zeigt alle 52 Slot-Punkte deckungsgleich mit den MOLLE-Reihen, Pouch dockt korrekt an.*

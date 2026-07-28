@@ -8,7 +8,7 @@ public class Component
     public int ComponentTemplateId { get; set; }
     public ComponentTemplate ComponentTemplate { get; set; } = null!;
     public required string Name { get; set; }
-    public required string Manufacturer { get; set; }
+    public string? Manufacturer { get; set; }
     public decimal? WeightGrams { get; set; }
     public decimal? PriceEur { get; set; }
 }

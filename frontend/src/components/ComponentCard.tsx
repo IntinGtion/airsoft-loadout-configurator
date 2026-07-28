@@ -18,7 +18,7 @@ export function ComponentCard({ component, onAdd }: Props) {
         <div>
           <p className={styles.category}>{component.categoryName}</p>
           <h3 className={styles.name}>{component.name}</h3>
-          <p className={styles.manufacturer}>{component.manufacturer}</p>
+          {component.manufacturer && <p className={styles.manufacturer}>{component.manufacturer}</p>}
         </div>
         {onAdd && (
           <button className={styles.addBtn} onClick={() => onAdd(component)} title="Add to loadout">

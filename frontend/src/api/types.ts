@@ -36,7 +36,7 @@ export interface ComponentResponse {
   categoryId: number
   categoryName: string
   name: string
-  manufacturer: string
+  manufacturer: string | null
   weightGrams: number | null
   priceEur: number | null
   svgAssetPath: string | null

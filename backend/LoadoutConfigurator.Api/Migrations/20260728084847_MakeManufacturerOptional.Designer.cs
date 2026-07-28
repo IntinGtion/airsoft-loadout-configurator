@@ -3,6 +3,7 @@ using System;
 using LoadoutConfigurator.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LoadoutConfigurator.Api.Migrations
 {
     [DbContext(typeof(LoadoutContext))]
-    partial class LoadoutContextModelSnapshot : ModelSnapshot
+    [Migration("20260728084847_MakeManufacturerOptional")]
+    partial class MakeManufacturerOptional
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.10");

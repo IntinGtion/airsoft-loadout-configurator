@@ -4,7 +4,7 @@ public record ComponentRequest(
     int CategoryId,
     int ComponentTemplateId,
     string Name,
-    string Manufacturer,
+    string? Manufacturer,
     decimal? WeightGrams,
     decimal? PriceEur
 );
@@ -14,7 +14,7 @@ public record ComponentResponse(
     int CategoryId,
     string CategoryName,
     string Name,
-    string Manufacturer,
+    string? Manufacturer,
     decimal? WeightGrams,
     decimal? PriceEur,
     string? SvgAssetPath,
