@@ -15,9 +15,9 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
     {
         var query = db.Components
             .Include(c => c.Category)
-            .Include(c => c.Slots).ThenInclude(s => s.AttachmentType)
-            .Include(c => c.AcceptedAttachmentTypes)
-            .Include(c => c.MountPoints).ThenInclude(m => m.AttachmentType)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.Slots).ThenInclude(s => s.AttachmentType)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.AcceptedAttachmentTypes)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.MountPoints).ThenInclude(m => m.AttachmentType)
             .AsQueryable();
 
         if (categoryId.HasValue)
@@ -32,9 +32,9 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
     {
         var component = await db.Components
             .Include(c => c.Category)
-            .Include(c => c.Slots).ThenInclude(s => s.AttachmentType)
-            .Include(c => c.AcceptedAttachmentTypes)
-            .Include(c => c.MountPoints).ThenInclude(m => m.AttachmentType)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.Slots).ThenInclude(s => s.AttachmentType)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.AcceptedAttachmentTypes)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.MountPoints).ThenInclude(m => m.AttachmentType)
             .FirstOrDefaultAsync(c => c.Id == id);
 
         if (component is null) return NotFound();
@@ -47,20 +47,17 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
         if (!await db.Categories.AnyAsync(c => c.Id == request.CategoryId))
             return BadRequest(new { error = "Category not found." });
 
-        var attachmentTypes = await db.AttachmentTypes
-            .Where(a => request.AcceptedAttachmentTypeIds.Contains(a.Id))
-            .ToListAsync();
+        if (!await db.ComponentTemplates.AnyAsync(t => t.Id == request.ComponentTemplateId))
+            return BadRequest(new { error = "ComponentTemplate not found." });
 
         var component = new Component
         {
             CategoryId = request.CategoryId,
+            ComponentTemplateId = request.ComponentTemplateId,
             Name = request.Name,
             Manufacturer = request.Manufacturer,
             WeightGrams = request.WeightGrams,
-            PriceEur = request.PriceEur,
-            SvgAssetPath = request.SvgAssetPath,
-            RealWidthMm = request.RealWidthMm,
-            AcceptedAttachmentTypes = attachmentTypes
+            PriceEur = request.PriceEur
         };
 
         db.Components.Add(component);
@@ -73,27 +70,21 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, ComponentRequest request)
     {
-        var component = await db.Components
-            .Include(c => c.AcceptedAttachmentTypes)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
+        var component = await db.Components.FirstOrDefaultAsync(c => c.Id == id);
         if (component is null) return NotFound();
 
         if (!await db.Categories.AnyAsync(c => c.Id == request.CategoryId))
             return BadRequest(new { error = "Category not found." });
 
-        var attachmentTypes = await db.AttachmentTypes
-            .Where(a => request.AcceptedAttachmentTypeIds.Contains(a.Id))
-            .ToListAsync();
+        if (!await db.ComponentTemplates.AnyAsync(t => t.Id == request.ComponentTemplateId))
+            return BadRequest(new { error = "ComponentTemplate not found." });
 
         component.CategoryId = request.CategoryId;
+        component.ComponentTemplateId = request.ComponentTemplateId;
         component.Name = request.Name;
         component.Manufacturer = request.Manufacturer;
         component.WeightGrams = request.WeightGrams;
         component.PriceEur = request.PriceEur;
-        component.SvgAssetPath = request.SvgAssetPath;
-        component.RealWidthMm = request.RealWidthMm;
-        component.AcceptedAttachmentTypes = attachmentTypes;
 
         await db.SaveChangesAsync();
 
@@ -114,9 +105,9 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
     private Task<Component?> LoadFull(int id) =>
         db.Components
             .Include(c => c.Category)
-            .Include(c => c.Slots).ThenInclude(s => s.AttachmentType)
-            .Include(c => c.AcceptedAttachmentTypes)
-            .Include(c => c.MountPoints).ThenInclude(m => m.AttachmentType)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.Slots).ThenInclude(s => s.AttachmentType)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.AcceptedAttachmentTypes)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.MountPoints).ThenInclude(m => m.AttachmentType)
             .FirstOrDefaultAsync(c => c.Id == id);
 
     private static ComponentResponse ToResponse(Component c) => new(
@@ -127,9 +118,9 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
         c.Manufacturer,
         c.WeightGrams,
         c.PriceEur,
-        c.SvgAssetPath,
-        c.RealWidthMm,
-        c.Slots.Select(s => new SlotResponse(
+        c.ComponentTemplate.SvgAssetPath,
+        c.ComponentTemplate.RealWidthMm,
+        c.ComponentTemplate.Slots.Select(s => new SlotResponse(
             s.Id,
             s.AttachmentTypeId,
             s.AttachmentType.Name,
@@ -139,8 +130,8 @@ public class ComponentsController(LoadoutContext db) : ControllerBase
             s.GridColumn,
             s.GridRow
         )).ToList(),
-        c.AcceptedAttachmentTypes.Select(a => new AttachmentTypeResponse(a.Id, a.Name)).ToList(),
-        c.MountPoints.Select(m => new MountPointResponse(
+        c.ComponentTemplate.AcceptedAttachmentTypes.Select(a => new AttachmentTypeResponse(a.Id, a.Name)).ToList(),
+        c.ComponentTemplate.MountPoints.Select(m => new MountPointResponse(
             m.Id,
             m.AttachmentTypeId,
             m.AttachmentType.Name,

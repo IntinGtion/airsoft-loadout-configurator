@@ -2,13 +2,11 @@ namespace LoadoutConfigurator.Api.DTOs;
 
 public record ComponentRequest(
     int CategoryId,
+    int ComponentTemplateId,
     string Name,
     string Manufacturer,
     decimal? WeightGrams,
-    decimal? PriceEur,
-    string? SvgAssetPath,
-    decimal? RealWidthMm,
-    List<int> AcceptedAttachmentTypeIds
+    decimal? PriceEur
 );
 
 public record ComponentResponse(

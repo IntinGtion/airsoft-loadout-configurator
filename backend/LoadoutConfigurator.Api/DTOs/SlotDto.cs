@@ -1,7 +1,7 @@
 namespace LoadoutConfigurator.Api.DTOs;
 
 public record SlotRequest(
-    int ComponentId,
+    int ComponentTemplateId,
     int AttachmentTypeId,
     string Label,
     float PositionXPercent,

@@ -32,13 +32,9 @@ public static class SeedData
         db.Categories.AddRange(catCarrier, catRifle, catPistol, catOptic, catPouch);
 
         // ── Plate Carriers ───────────────────────────────────────────────────
-        var jpc = new Component
+        var jpcTemplate = new ComponentTemplate
         {
-            Category = catCarrier,
             Name = "Crye Precision JPC 2.0",
-            Manufacturer = "Crye Precision",
-            WeightGrams = 1050,
-            PriceEur = 349,
             RealWidthMm = 260, // ca. Frontpanel-Breite laut Herstellerangabe
             Slots =
             [
@@ -49,14 +45,19 @@ public static class SeedData
                 new Slot { AttachmentType = qdSling, Label = "QD Sling Point R",   PositionXPercent = 75, PositionYPercent = 20 },
             ]
         };
-
-        var fcpc = new Component
+        var jpc = new Component
         {
             Category = catCarrier,
+            ComponentTemplate = jpcTemplate,
+            Name = "Crye Precision JPC 2.0",
+            Manufacturer = "Crye Precision",
+            WeightGrams = 1050,
+            PriceEur = 349,
+        };
+
+        var fcpcTemplate = new ComponentTemplate
+        {
             Name = "Ferro Concepts FCPC V5",
-            Manufacturer = "Ferro Concepts",
-            WeightGrams = 820,
-            PriceEur = 415,
             RealWidthMm = 255,
             Slots =
             [
@@ -67,14 +68,19 @@ public static class SeedData
                 new Slot { AttachmentType = qdSling, Label = "QD Sling Point R",   PositionXPercent = 78, PositionYPercent = 18 },
             ]
         };
-
-        var mopc = new Component
+        var fcpc = new Component
         {
             Category = catCarrier,
+            ComponentTemplate = fcpcTemplate,
+            Name = "Ferro Concepts FCPC V5",
+            Manufacturer = "Ferro Concepts",
+            WeightGrams = 820,
+            PriceEur = 415,
+        };
+
+        var mopcTemplate = new ComponentTemplate
+        {
             Name = "Condor MOPC",
-            Manufacturer = "Condor Outdoor",
-            WeightGrams = 1200,
-            PriceEur = 119,
             RealWidthMm = 270, // ca. Frontpanel-Breite, generischer Plattenträger für SAPI-Plates 10x12"
             SvgAssetPath = "/components/condor-mopc.svg",
             // Slot-Koordinaten aus Figma-Datei "Plattenträger MVP" (Frame PlateCarrier_MOPC_Front) exportiert:
@@ -119,15 +125,20 @@ public static class SeedData
                 new Slot { AttachmentType = molle, Label = "MOLLE 6-6", PositionXPercent = 77.74f, PositionYPercent = 88.51f, GridColumn = 6, GridRow = 6 },
             ]
         };
+        var mopc = new Component
+        {
+            Category = catCarrier,
+            ComponentTemplate = mopcTemplate,
+            Name = "Condor MOPC",
+            Manufacturer = "Condor Outdoor",
+            WeightGrams = 1200,
+            PriceEur = 119,
+        };
 
         // ── Assault Rifles ───────────────────────────────────────────────────
-        var mws = new Component
+        var mwsTemplate = new ComponentTemplate
         {
-            Category = catRifle,
             Name = "Tokyo Marui MWS GBBR",
-            Manufacturer = "Tokyo Marui",
-            WeightGrams = 3200,
-            PriceEur = 589,
             RealWidthMm = 840, // Gesamtlänge (längste Ausdehnung, keine "Breite" i.e.S.)
             Slots =
             [
@@ -138,14 +149,19 @@ public static class SeedData
                 new Slot { AttachmentType = qdSling,   Label = "QD Sling Point",    PositionXPercent = 85, PositionYPercent = 45 },
             ]
         };
-
-        var weM4 = new Component
+        var mws = new Component
         {
             Category = catRifle,
+            ComponentTemplate = mwsTemplate,
+            Name = "Tokyo Marui MWS GBBR",
+            Manufacturer = "Tokyo Marui",
+            WeightGrams = 3200,
+            PriceEur = 589,
+        };
+
+        var weM4Template = new ComponentTemplate
+        {
             Name = "WE-Tech M4 GBBR",
-            Manufacturer = "WE-Tech",
-            WeightGrams = 2900,
-            PriceEur = 279,
             RealWidthMm = 840, // Gesamtlänge
             Slots =
             [
@@ -156,14 +172,19 @@ public static class SeedData
                 new Slot { AttachmentType = qdSling,   Label = "QD Sling Point",   PositionXPercent = 85, PositionYPercent = 45 },
             ]
         };
-
-        var cxp = new Component
+        var weM4 = new Component
         {
             Category = catRifle,
+            ComponentTemplate = weM4Template,
+            Name = "WE-Tech M4 GBBR",
+            Manufacturer = "WE-Tech",
+            WeightGrams = 2900,
+            PriceEur = 279,
+        };
+
+        var cxpTemplate = new ComponentTemplate
+        {
             Name = "ICS CXP-UK1 Captain",
-            Manufacturer = "ICS",
-            WeightGrams = 2750,
-            PriceEur = 389,
             RealWidthMm = 700, // Gesamtlänge, kürzeres SBR-Layout
             Slots =
             [
@@ -174,111 +195,126 @@ public static class SeedData
                 new Slot { AttachmentType = qdSling,   Label = "QD Sling Point",   PositionXPercent = 85, PositionYPercent = 45 },
             ]
         };
+        var cxp = new Component
+        {
+            Category = catRifle,
+            ComponentTemplate = cxpTemplate,
+            Name = "ICS CXP-UK1 Captain",
+            Manufacturer = "ICS",
+            WeightGrams = 2750,
+            PriceEur = 389,
+        };
 
         // ── Pistols ──────────────────────────────────────────────────────────
-        var hicapa = new Component
+        var hicapaTemplate = new ComponentTemplate
         {
-            Category = catPistol,
             Name = "Tokyo Marui Hi-Capa 5.1",
-            Manufacturer = "Tokyo Marui",
-            WeightGrams = 910,
-            PriceEur = 179,
             RealWidthMm = 220, // Gesamtlänge
             Slots =
             [
                 new Slot { AttachmentType = picatinny, Label = "Underslung Rail",  PositionXPercent = 50, PositionYPercent = 72 },
             ]
         };
-
-        var g17 = new Component
+        var hicapa = new Component
         {
             Category = catPistol,
+            ComponentTemplate = hicapaTemplate,
+            Name = "Tokyo Marui Hi-Capa 5.1",
+            Manufacturer = "Tokyo Marui",
+            WeightGrams = 910,
+            PriceEur = 179,
+        };
+
+        var g17Template = new ComponentTemplate
+        {
             Name = "WE-Tech G17 Gen4 GBB",
-            Manufacturer = "WE-Tech",
-            WeightGrams = 780,
-            PriceEur = 119,
             RealWidthMm = 186, // Gesamtlänge, entspricht realer Glock 17
             Slots =
             [
                 new Slot { AttachmentType = picatinny, Label = "Underslung Rail",  PositionXPercent = 50, PositionYPercent = 72 },
             ]
         };
+        var g17 = new Component
+        {
+            Category = catPistol,
+            ComponentTemplate = g17Template,
+            Name = "WE-Tech G17 Gen4 GBB",
+            Manufacturer = "WE-Tech",
+            WeightGrams = 780,
+            PriceEur = 119,
+        };
 
         // ── Optics (attach via Picatinny or M-LOK) ───────────────────────────
+        var aimpointTemplate = new ComponentTemplate { Name = "Aimpoint T2 Micro", RealWidthMm = 70, AcceptedAttachmentTypes = [picatinny] };
         var aimpoint = new Component
         {
             Category = catOptic,
+            ComponentTemplate = aimpointTemplate,
             Name = "Aimpoint T2 Micro",
             Manufacturer = "Aimpoint",
             WeightGrams = 420,
             PriceEur = 899,
-            RealWidthMm = 70,
-            AcceptedAttachmentTypes = [picatinny]
         };
 
+        var eotechTemplate = new ComponentTemplate { Name = "EOTech 553", RealWidthMm = 140, AcceptedAttachmentTypes = [picatinny] };
         var eotech = new Component
         {
             Category = catOptic,
+            ComponentTemplate = eotechTemplate,
             Name = "EOTech 553",
             Manufacturer = "EOTech",
             WeightGrams = 510,
             PriceEur = 649,
-            RealWidthMm = 140,
-            AcceptedAttachmentTypes = [picatinny]
         };
 
+        var vortexTemplate = new ComponentTemplate { Name = "Vortex Crossfire Red Dot", RealWidthMm = 85, AcceptedAttachmentTypes = [picatinny] };
         var vortex = new Component
         {
             Category = catOptic,
+            ComponentTemplate = vortexTemplate,
             Name = "Vortex Crossfire Red Dot",
             Manufacturer = "Vortex Optics",
             WeightGrams = 185,
             PriceEur = 179,
-            RealWidthMm = 85,
-            AcceptedAttachmentTypes = [picatinny]
         };
 
+        var eotech2Template = new ComponentTemplate { Name = "EOTech XPS3", RealWidthMm = 93, AcceptedAttachmentTypes = [picatinny] };
         var eotech2 = new Component
         {
             Category = catOptic,
+            ComponentTemplate = eotech2Template,
             Name = "EOTech XPS3",
             Manufacturer = "EOTech",
             WeightGrams = 370,
             PriceEur = 729,
-            RealWidthMm = 93,
-            AcceptedAttachmentTypes = [picatinny]
         };
 
         // ── Pouches (attach via MOLLE) ────────────────────────────────────────
+        var adminPouchTemplate = new ComponentTemplate { Name = "Condor Admin Pouch", RealWidthMm = 180, AcceptedAttachmentTypes = [molle] };
         var adminPouch = new Component
         {
             Category = catPouch,
+            ComponentTemplate = adminPouchTemplate,
             Name = "Condor Admin Pouch",
             Manufacturer = "Condor Outdoor",
             WeightGrams = 220,
             PriceEur = 28,
-            RealWidthMm = 180,
-            AcceptedAttachmentTypes = [molle]
         };
 
+        var magPouchTemplate = new ComponentTemplate { Name = "WAS Double Mag Pouch", RealWidthMm = 140, AcceptedAttachmentTypes = [molle] };
         var magPouch = new Component
         {
             Category = catPouch,
+            ComponentTemplate = magPouchTemplate,
             Name = "WAS Double Mag Pouch",
             Manufacturer = "Warrior Assault Systems",
             WeightGrams = 180,
             PriceEur = 44,
-            RealWidthMm = 140,
-            AcceptedAttachmentTypes = [molle]
         };
 
-        var tenSpeed = new Component
+        var tenSpeedTemplate = new ComponentTemplate
         {
-            Category = catPouch,
             Name = "BFG Ten-Speed M4 Pouch",
-            Manufacturer = "Blue Force Gear",
-            WeightGrams = 120,
-            PriceEur = 64,
             RealWidthMm = 80,
             SvgAssetPath = "/components/bfg-tenspeed.svg",
             AcceptedAttachmentTypes = [molle],
@@ -296,16 +332,25 @@ public static class SeedData
                 new MountPoint { AttachmentType = molle, Label = "MOLLE 2-4", PositionXPercent = 72.44f, PositionYPercent = 67.97f, GridColumn = 2, GridRow = 4 },
             ]
         };
+        var tenSpeed = new Component
+        {
+            Category = catPouch,
+            ComponentTemplate = tenSpeedTemplate,
+            Name = "BFG Ten-Speed M4 Pouch",
+            Manufacturer = "Blue Force Gear",
+            WeightGrams = 120,
+            PriceEur = 64,
+        };
 
+        var ifakTemplate = new ComponentTemplate { Name = "North American Rescue IFAK", RealWidthMm = 170, AcceptedAttachmentTypes = [molle] };
         var ifak = new Component
         {
             Category = catPouch,
+            ComponentTemplate = ifakTemplate,
             Name = "North American Rescue IFAK",
             Manufacturer = "North American Rescue",
             WeightGrams = 340,
             PriceEur = 89,
-            RealWidthMm = 170,
-            AcceptedAttachmentTypes = [molle]
         };
 
         db.Components.AddRange(

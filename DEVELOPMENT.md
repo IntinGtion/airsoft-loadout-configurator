@@ -87,15 +87,17 @@ backend/ (ASP.NET Core)
 
 ```
 Category         (plate-carrier, rifle, optic, pistol, pouch)
-    └── Component    (z.B. "Crye JPC 2.0", "TM MWS GBBR")
-          ├── Slot[]               Befestigungspunkte, die DIESE Komponente ANBIETET (X/Y-Position in %)
-          │     └── AttachmentType  (molle, picatinny, gbb-mag-well, ...)
-          ├── MountPoint[]         eigene Andockpunkte, mit denen DIESE Komponente SICH SELBST an einem
-          │     └── AttachmentType  Slot einer anderen Komponente befestigt (X/Y-Position in %, relativ
-          │                         zur eigenen Silhouette) — z.B. die MOLLE-Straps auf der Rückseite
-          │                         einer Tasche
-          └── AcceptedAttachmentTypes[]  (n:m — welche Slot-Typen akzeptiert diese Komponente; schnelle
-                                          Typ-Prüfung ohne Positionsdaten, siehe 422-Check unten)
+    └── Component    (reales, kaufbares Produkt — z.B. "Crye JPC 2.0", "TM MWS GBBR";
+          │           Name, Manufacturer, WeightGrams, PriceEur)
+          └── ComponentTemplate  (die visuelle/physische Form — SVG + Anbaupunkte;
+                ├── Slot[]               Befestigungspunkte, die DIESES Template ANBIETET (X/Y-Position in %)
+                │     └── AttachmentType  (molle, picatinny, gbb-mag-well, ...)
+                ├── MountPoint[]         eigene Andockpunkte, mit denen DIESES Template SICH SELBST an einem
+                │     └── AttachmentType  Slot eines anderen Templates befestigt (X/Y-Position in %, relativ
+                │                         zur eigenen Silhouette) — z.B. die MOLLE-Straps auf der Rückseite
+                │                         einer Tasche
+                └── AcceptedAttachmentTypes[]  (n:m — welche Slot-Typen akzeptiert dieses Template; schnelle
+                                                Typ-Prüfung ohne Positionsdaten, siehe 422-Check unten)
 
 Loadout
     └── LoadoutItem[]
@@ -103,14 +105,16 @@ Loadout
           └── ParentSlot?   (optional: an welchem Slot befestigt)
 ```
 
+**`ComponentTemplate` ✅ erledigt (2026-07-28):** trennt die visuelle/physische Form (SVG, `Slot`s, `MountPoint`s, `AcceptedAttachmentTypes`, `RealWidthMm`) von den Produktdaten des realen, kaufbaren Artikels (`Component`: Name, Manufacturer, WeightGrams, PriceEur, `ComponentTemplateId`). Grund: mehrere Hersteller können optisch/geometrisch identische Klone verkaufen (z.B. baugleiche Plattenträger unter verschiedenem Namen) — die sollen sich künftig ein einziges Template (ein SVG, ein Satz Slots) teilen können, statt Formdaten pro Produkt zu duplizieren. Aktuell ist es noch 1:1 (16 Components, 16 Templates), die n:1-Wiederverwendung ist vorbereitet, aber noch ungenutzt. Die öffentliche API-Form (`ComponentResponse`) bleibt bewusst flach (`slots`, `mountPoints`, `svgAssetPath`, `realWidthMm` weiterhin direkt am Component-JSON) — der Controller joint intern über das Template, das Frontend brauchte dadurch **keine** Änderungen.
+
 **Wichtige Designentscheidungen:**
-- `Slot` gehört einer `Component` und hat einen `AttachmentType` (z.B. Picatinny) — das ist die Anbieter-Seite ("was kann an mir befestigt werden")
-- `MountPoint` gehört ebenfalls einer `Component`, ist aber die Empfänger-Seite ("wie/wo befestige ich mich an meinem Parent") — z.B. hat eine MOLLE-Tasche mehrere eigene MountPoints für ihre Straps, unabhängig von etwaigen eigenen `Slot`s, die sie selbst wieder anbietet (z.B. für ein Patch)
-- `Component.AcceptedAttachmentTypes` sagt, an welchen Slot-Typen die Komponente grundsätzlich befestigt werden kann (Typ-Ebene)
-- Beim Hinzufügen zu einem Loadout prüft der Server zweistufig: (1) passt `Component.AcceptedAttachmentTypes` zu `Slot.AttachmentTypeId`? (2) **Footprint-Match** ✅ erledigt (2026-07-27): passen alle `MountPoint`s der Komponente auf zusammenhängende freie `Slot`s des Parents? Beides → 422 Unprocessable Entity bei Fehlschlag, siehe "Footprint-Matching" unten
+- `Slot` gehört einem `ComponentTemplate` und hat einen `AttachmentType` (z.B. Picatinny) — das ist die Anbieter-Seite ("was kann an mir befestigt werden")
+- `MountPoint` gehört ebenfalls einem `ComponentTemplate`, ist aber die Empfänger-Seite ("wie/wo befestige ich mich an meinem Parent") — z.B. hat eine MOLLE-Tasche mehrere eigene MountPoints für ihre Straps, unabhängig von etwaigen eigenen `Slot`s, die sie selbst wieder anbietet (z.B. für ein Patch)
+- `ComponentTemplate.AcceptedAttachmentTypes` sagt, an welchen Slot-Typen das Template grundsätzlich befestigt werden kann (Typ-Ebene)
+- Beim Hinzufügen zu einem Loadout prüft der Server zweistufig: (1) passt `ComponentTemplate.AcceptedAttachmentTypes` zu `Slot.AttachmentTypeId`? (2) **Footprint-Match** ✅ erledigt (2026-07-27): passen alle `MountPoint`s des Templates auf zusammenhängende freie `Slot`s des Parents? Beides → 422 Unprocessable Entity bei Fehlschlag, siehe "Footprint-Matching" unten
 - `Slot.PositionXPercent/YPercent` und `MountPoint.PositionXPercent/YPercent` sind für die ersten beiden Assets (Condor MOPC, BFG Ten-Speed) bereits echte, aus Figma exportierte Koordinaten (siehe Abschnitt 4 "Assets"); bei allen anderen Seed-Komponenten weiterhin Platzhalter. Werden nur fürs **Rendering** verwendet
-- `Slot.GridColumn/GridRow` und `MountPoint.GridColumn/GridRow` (neu, nullable) sind diskrete Rasterkoordinaten (z.B. MOLLE-Spalte/Reihe), unabhängig vom Prozent-Rendering. Werden fürs **Footprint-Matching** verwendet — siehe Begründung unten
-- `Component.RealWidthMm` (neu, nullable, 2026-07-27) ist ein reales Referenzmaß in mm (aus öffentlichen Produktdaten, ca.-Werte) — für alle 16 Seed-Komponenten befüllt. Wird fürs **relative Größenverhältnis im Canvas** verwendet, siehe Abschnitt 7 "Gemeinsamer Maßstab"
+- `Slot.GridColumn/GridRow` und `MountPoint.GridColumn/GridRow` (nullable) sind diskrete Rasterkoordinaten (z.B. MOLLE-Spalte/Reihe), unabhängig vom Prozent-Rendering. Werden fürs **Footprint-Matching** verwendet — siehe Begründung unten
+- `ComponentTemplate.RealWidthMm` (nullable) ist ein reales Referenzmaß in mm (aus öffentlichen Produktdaten, ca.-Werte) — für alle 16 Seed-Komponenten befüllt. Wird fürs **relative Größenverhältnis im Canvas** verwendet, siehe Abschnitt 7 "Gemeinsamer Maßstab"
 
 ### Footprint-Matching (Server-seitige Platzierungsprüfung)
 
@@ -136,7 +140,7 @@ So soll die eigentliche Kernfunktion (siehe Abschnitt 1) technisch funktionieren
 2. Ihre `Slot`-Punkte (`PositionXPercent/Y`) markieren Anbaustellen auf dieser Silhouette.
 3. Zieht man eine kompatible Komponente auf einen Slot, wird deren SVG passgenau an dieser Position eingeblendet — nicht als Icon in einer Liste, sondern als echtes zusammengesetztes Bild.
 4. Das ist **rekursiv**: `LoadoutItem.ParentSlotId` verweist auf einen Slot, egal wie tief verschachtelt — eine Tasche kann selbst wieder eigene Slots haben (z.B. für einen Patch), eine Rail selbst wieder für eine Optik.
-5. Die 422-Kompatibilitätsprüfung (Typ-Ebene) UND die **Footprint-Prüfung** (Geometrie-Ebene, `Component.MountPoints` gegen zusammenhängende freie `Slot`s des Parents) sind beide ✅ erledigt (2026-07-27), siehe Abschnitt 3 "Footprint-Matching" und Abschnitt 4 "Frontend".
+5. Die 422-Kompatibilitätsprüfung (Typ-Ebene) UND die **Footprint-Prüfung** (Geometrie-Ebene, `ComponentTemplate.MountPoints` gegen zusammenhängende freie `Slot`s des Parents) sind beide ✅ erledigt (2026-07-27), siehe Abschnitt 3 "Footprint-Matching" und Abschnitt 4 "Frontend".
 
 **Colorway-Umschalter ✅ erledigt (2026-07-27):** Jede Komponente ist als einfarbige Silhouette angelegt (ein einziger `fill`-Hex-Wert für den Körper, siehe `frontend/public/components/*.svg`). Da Konva SVGs als rasterisierte Bitmaps zeichnet (`use-image`), lässt sich die Farbe nicht nachträglich per CSS/Filter auf dem fertigen Bild ändern — stattdessen holt `frontend/src/components/canvas/recolorSvg.ts` den SVG-Quelltext, ersetzt den `fill`-Wert per Text-Replace und lädt das Ergebnis als neuen Blob. `ComponentSprite` bekommt dafür einen `colorway`-Prop, der rekursiv durch `CanvasNode` durchgereicht wird, sodass ein einziger globaler Umschalter (`CanvasView`, Palette in `colorways.ts`: Ranger Green, Coyote Tan, Black, Original) das komplette zusammengebaute Loadout auf einmal umfärbt — beantwortet direkt die "passt der Tan-Ton"-Frage aus Abschnitt 1. Eine echte Multicam-Option (Muster statt Vollfarbe) geht mit diesem Text-Replace-Ansatz nicht, nur solide Farben. Mit Playwright verifiziert (alle 3 Farben + zurück zu Original, beide platzierten Komponenten färben synchron um).
 
@@ -172,6 +176,7 @@ Für Teil 1 wurde `Component.RealWidthMm` eingeführt (reales Referenzmaß in mm
 - [x] Share-Token: `GET /api/loadouts/share/{guid}` — öffentlicher Lesezugriff
 - [x] CORS konfiguriert für `http://localhost:5173`
 - [x] Bekannte NuGet-Sicherheitswarnungen (NU1903) behoben, siehe Tabelle in Abschnitt 2
+- [x] `ComponentTemplate` eingeführt (2026-07-28): Visuals/Slots/MountPoints/AcceptedAttachmentTypes von den Produktdaten (`Component`) entkoppelt, siehe Abschnitt 3. Migration `IntroduceComponentTemplates`, lokale `loadout.db` dafür neu geseedet (Dev-Only-Datenverlust, kein produktiver Bestand betroffen)
 
 **Alle API-Routen:**
 ```
@@ -184,7 +189,7 @@ GET/PUT/DELETE  /api/components/{id}
 GET/POST        /api/attachmenttypes
 GET/PUT/DELETE  /api/attachmenttypes/{id}
 
-GET/POST        /api/slots               (?componentId=X zum Filtern)
+GET/POST        /api/slots               (?componentTemplateId=X zum Filtern)
 GET/PUT/DELETE  /api/slots/{id}
 
 GET/POST        /api/loadouts
@@ -366,9 +371,11 @@ War als Nebenfunktion gedacht (siehe Abschnitt 1), ist fertig: Loadout erstellen
 
 ---
 
-*Zuletzt aktualisiert: 2026-07-27 — Nach der Item-Liste/Verschieben/Löschen-Funktion (Abschnitt 4) noch zwei vom Projektinhaber beim Testen gefundene Bugs behoben: eine Z-Order-Regression, die kurzzeitig alle Slot-Punkte eines frischen Plattenträgers unsichtbar machte, und ein "alles verschwindet kurz"-Effekt bei jedem Hinzufügen/Verschieben/Löschen, weil `reload()` bisher immer den vollen Ladezustand (inkl. Stage-Unmount) auslöste — jetzt nur noch beim allerersten Laden. Damit läuft das Canvas jetzt durchgehend flüssig. Davor: Item-Liste + Verschieben/Löschen direkt im Canvas ergänzt (inkl. eines dabei gefundenen, vorher nie ausgelösten Backend-Bugs im `MoveItem`-Endpoint), und Teil 1 des Maßstabs-Themas (`Component.RealWidthMm` für relative Größenverhältnisse). Teil 2 des Maßstabs-Themas (pixelgenaue geometrische Übereinstimmung zwischen unabhängigen Figma-Dateien inkl. Toleranzschwelle) bleibt weiterhin bewusst offen, siehe Abschnitt 3.
+*Zuletzt aktualisiert: 2026-07-28 — `ComponentTemplate` eingeführt, siehe Nachtrag unten und Abschnitt 3/4. Davor, 2026-07-27: Nach der Item-Liste/Verschieben/Löschen-Funktion (Abschnitt 4) noch zwei vom Projektinhaber beim Testen gefundene Bugs behoben: eine Z-Order-Regression, die kurzzeitig alle Slot-Punkte eines frischen Plattenträgers unsichtbar machte, und ein "alles verschwindet kurz"-Effekt bei jedem Hinzufügen/Verschieben/Löschen, weil `reload()` bisher immer den vollen Ladezustand (inkl. Stage-Unmount) auslöste — jetzt nur noch beim allerersten Laden. Damit läuft das Canvas jetzt durchgehend flüssig. Davor: Item-Liste + Verschieben/Löschen direkt im Canvas ergänzt (inkl. eines dabei gefundenen, vorher nie ausgelösten Backend-Bugs im `MoveItem`-Endpoint), und Teil 1 des Maßstabs-Themas (`Component.RealWidthMm` für relative Größenverhältnisse). Teil 2 des Maßstabs-Themas (pixelgenaue geometrische Übereinstimmung zwischen unabhängigen Figma-Dateien inkl. Toleranzschwelle) bleibt weiterhin bewusst offen, siehe Abschnitt 3.
 Direkt danach beim ersten eigenen Test des Projektinhabers im echten Browser gefunden und behoben: eine leere Canvas ohne Root-Item hatte gar kein Drop-Ziel (nur Text statt Stage), und selbst mit Root-Item konnte man per Drag & Drop nichts als neues eigenständiges Item ablegen — nur an bestehende Slots andocken. Beides gefixt: die Stage ist jetzt immer ein Drop-Ziel (mit Hinweis-Overlay wenn leer), und ein Drop ohne nahen Slot legt das Item einfach als neues eigenständiges Root-Item an (wie der alte "+"-Button in der Listenansicht).
 
 **Nachtrag, noch am selben Tag:** Auch nach obigem Fix ließ sich im echten Browser des Projektinhabers nichts an einen Slot andocken (Item landete immer nur an der festen Root-Stapel-Position) — mit Playwright ließ sich das zunächst nicht reproduzieren. Ursache: natives HTML5-Drag-and-Drop (`draggable`/`dragstart`/`dragover`/`drop`) ist über einem `<canvas>`-Element (react-konva Stage) browserübergreifend unzuverlässig; Playwrights `dragTo()` simuliert die komplette native DnD-Sequenz selbst und reproduziert diesen Bug nicht. Behoben durch kompletten Umbau auf reine Maus-Events (`mousedown`/`mousemove`/`mouseup`) inkl. eigenem Cursor-Tag (da kein Browser-natives Drag-Preview mehr) — siehe `CanvasView.tsx`. Verifiziert mit Playwright über echte `mouse.move`-Sequenzen (nicht `dragTo()`, das diesen Codepfad gar nicht mehr auslöst).
 
-**Zweiter Nachtrag:** Feedback nach dem ersten funktionierenden Test: Anker-Konnektor sollte immer exakt unter dem Mauszeiger sitzen (nicht die Bildmitte), alle Konnektoren der gezogenen Komponente sollten sichtbar sein, und nach dem Ablegen sollten wirklich alle belegten Slots ausgeblendet werden, nicht nur einer. Der letzte Punkt entpuppte sich als echter Rendering-Bug: `CanvasNode` zentrierte angehängte Kind-Sprites bisher einfach auf dem Parent-Slot, unabhängig davon, wo der Anker-Mountpoint tatsächlich innerhalb der eigenen Silhouette liegt (bei der BFG-Pouch z.B. oben links, nicht mittig) — dadurch stimmten Bildposition und die (korrekt berechneten) belegten Slots nicht überein. Jetzt löst `CanvasNode` seine Render-Position aus `targetX/targetY` (Zielpunkt) + `anchorPercent` (wo der Anker innerhalb der eigenen SVG liegt) zurück; Root-Items nutzen `anchorPercent={0,0}`, was sich exakt wie vorher verhält. Der Drag-Ghost nutzt dieselbe Logik und zeigt zusätzlich alle eigenen Mountpoints der gezogenen Komponente als Punkte an. Mit Playwright verifiziert.*
+**Zweiter Nachtrag:** Feedback nach dem ersten funktionierenden Test: Anker-Konnektor sollte immer exakt unter dem Mauszeiger sitzen (nicht die Bildmitte), alle Konnektoren der gezogenen Komponente sollten sichtbar sein, und nach dem Ablegen sollten wirklich alle belegten Slots ausgeblendet werden, nicht nur einer. Der letzte Punkt entpuppte sich als echter Rendering-Bug: `CanvasNode` zentrierte angehängte Kind-Sprites bisher einfach auf dem Parent-Slot, unabhängig davon, wo der Anker-Mountpoint tatsächlich innerhalb der eigenen Silhouette liegt (bei der BFG-Pouch z.B. oben links, nicht mittig) — dadurch stimmten Bildposition und die (korrekt berechneten) belegten Slots nicht überein. Jetzt löst `CanvasNode` seine Render-Position aus `targetX/targetY` (Zielpunkt) + `anchorPercent` (wo der Anker innerhalb der eigenen SVG liegt) zurück; Root-Items nutzen `anchorPercent={0,0}`, was sich exakt wie vorher verhält. Der Drag-Ghost nutzt dieselbe Logik und zeigt zusätzlich alle eigenen Mountpoints der gezogenen Komponente als Punkte an. Mit Playwright verifiziert.
+
+**Nachtrag 2026-07-28 — `ComponentTemplate` eingeführt:** Nach einer Architektur-Diskussion des Projektinhabers mit Claude Desktop (unabhängig von dieser Session, daher auf Aktualität geprüft statt blind übernommen) wurde `ComponentTemplate` als eigene Entity eingeführt, um Visuals/Formdaten (`SvgAssetPath`, `RealWidthMm`, `Slot[]`, `MountPoint[]`, `AcceptedAttachmentTypes[]`) von den Produktdaten (`Component`: Name, Manufacturer, WeightGrams, PriceEur) zu trennen — Motivation: mehrere Hersteller können optisch identische Klone verkaufen, die künftig ein Template teilen sollen, statt Formdaten pro Produkt zu duplizieren. Details, Datenmodell-Diagramm und Begründung siehe Abschnitt 3. Die öffentliche `ComponentResponse`-API-Form wurde bewusst unverändert (flach) gelassen, wodurch das Frontend ohne jede Codeänderung weiterlief — per Playwright-Smoketest verifiziert (Plattenträger + Pouch platzieren, verschieben, Footprint-Konflikt auslösen; alles wie vor der Migration). Migration `IntroduceComponentTemplates` erzeugt einen nicht datenerhaltenden FK-Umbau (`Slot`/`MountPoint` zeigen jetzt auf `ComponentTemplateId` statt `ComponentId`); da SeedData Katalogdaten nur bei leerer DB neu anlegt, wurde die lokale `loadout.db` bewusst gelöscht statt eine Custom-Datenmigration zu schreiben — reine Dev-Wegwerfdaten, kein produktiver Bestand betroffen.*

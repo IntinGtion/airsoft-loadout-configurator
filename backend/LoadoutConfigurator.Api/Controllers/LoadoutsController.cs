@@ -82,8 +82,8 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
             return NotFound();
 
         var component = await db.Components
-            .Include(c => c.AcceptedAttachmentTypes)
-            .Include(c => c.MountPoints)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.AcceptedAttachmentTypes)
+            .Include(c => c.ComponentTemplate).ThenInclude(t => t.MountPoints)
             .FirstOrDefaultAsync(c => c.Id == request.ComponentId);
 
         if (component is null)
@@ -99,7 +99,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
             if (parentSlot is null)
                 return BadRequest(new { error = "Parent slot not found." });
 
-            var fits = component.AcceptedAttachmentTypes
+            var fits = component.ComponentTemplate.AcceptedAttachmentTypes
                 .Any(a => a.Id == parentSlot.AttachmentTypeId);
 
             if (!fits)
@@ -125,7 +125,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
 
         var created = await db.LoadoutItems
             .Include(i => i.Component).ThenInclude(c => c.Category)
-            .Include(i => i.Component).ThenInclude(c => c.AcceptedAttachmentTypes)
+            .Include(i => i.Component).ThenInclude(c => c.ComponentTemplate).ThenInclude(t => t.AcceptedAttachmentTypes)
             .FirstAsync(i => i.Id == item.Id);
 
         return CreatedAtAction(nameof(GetById), new { id }, ToItemResponse(created));
@@ -136,8 +136,8 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
     {
         var item = await db.LoadoutItems
             .Include(i => i.Component).ThenInclude(c => c.Category)
-            .Include(i => i.Component).ThenInclude(c => c.AcceptedAttachmentTypes)
-            .Include(i => i.Component).ThenInclude(c => c.MountPoints)
+            .Include(i => i.Component).ThenInclude(c => c.ComponentTemplate).ThenInclude(t => t.AcceptedAttachmentTypes)
+            .Include(i => i.Component).ThenInclude(c => c.ComponentTemplate).ThenInclude(t => t.MountPoints)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.LoadoutId == id);
 
         if (item is null) return NotFound();
@@ -151,7 +151,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
             if (parentSlot is null)
                 return BadRequest(new { error = "Parent slot not found." });
 
-            var fits = item.Component.AcceptedAttachmentTypes
+            var fits = item.Component.ComponentTemplate.AcceptedAttachmentTypes
                 .Any(a => a.Id == parentSlot.AttachmentTypeId);
 
             if (!fits)
@@ -199,7 +199,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
     /// or null if its MountPoint footprint doesn't line up with the parent's Slot grid.
     private static List<Slot>? ComputeFootprint(Component component, Slot anchorSlot, List<Slot> parentSlots)
     {
-        var gridMountPoints = component.MountPoints
+        var gridMountPoints = component.ComponentTemplate.MountPoints
             .Where(m => m.GridColumn.HasValue && m.GridRow.HasValue)
             .ToList();
 
@@ -237,7 +237,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
                 && i.Id != excludeItemId
                 && i.ParentSlotId.HasValue
                 && parentSlotIds.Contains(i.ParentSlotId.Value))
-            .Include(i => i.Component).ThenInclude(c => c.MountPoints)
+            .Include(i => i.Component).ThenInclude(c => c.ComponentTemplate).ThenInclude(t => t.MountPoints)
             .ToListAsync();
 
         var occupied = new HashSet<int>();
@@ -257,7 +257,7 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
     private async Task<string?> ValidateFootprint(int loadoutId, Component component, Slot parentSlot, int? excludeItemId = null)
     {
         var parentSlots = await db.Slots
-            .Where(s => s.ComponentId == parentSlot.ComponentId)
+            .Where(s => s.ComponentTemplateId == parentSlot.ComponentTemplateId)
             .ToListAsync();
 
         var footprint = ComputeFootprint(component, parentSlot, parentSlots);
@@ -283,7 +283,8 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
                     .ThenInclude(c => c.Category)
             .Include(l => l.Items)
                 .ThenInclude(i => i.Component)
-                    .ThenInclude(c => c.AcceptedAttachmentTypes);
+                    .ThenInclude(c => c.ComponentTemplate)
+                        .ThenInclude(t => t.AcceptedAttachmentTypes);
 
     private static LoadoutResponse ToResponse(Loadout l) => new(
         l.Id,
@@ -300,8 +301,8 @@ public class LoadoutsController(LoadoutContext db) : ControllerBase
         i.Component.Category.Name,
         i.Component.WeightGrams,
         i.Component.PriceEur,
-        i.Component.SvgAssetPath,
-        i.Component.AcceptedAttachmentTypes
+        i.Component.ComponentTemplate.SvgAssetPath,
+        i.Component.ComponentTemplate.AcceptedAttachmentTypes
             .Select(a => new AttachmentTypeResponse(a.Id, a.Name)).ToList(),
         i.ParentSlotId
     );

@@ -11,14 +11,14 @@ namespace LoadoutConfigurator.Api.Controllers;
 public class SlotsController(LoadoutContext db) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int? componentId)
+    public async Task<IActionResult> GetAll([FromQuery] int? componentTemplateId)
     {
         var query = db.Slots
             .Include(s => s.AttachmentType)
             .AsQueryable();
 
-        if (componentId.HasValue)
-            query = query.Where(s => s.ComponentId == componentId.Value);
+        if (componentTemplateId.HasValue)
+            query = query.Where(s => s.ComponentTemplateId == componentTemplateId.Value);
 
         var slots = (await query.ToListAsync()).Select(ToResponse).ToList();
         return Ok(slots);
@@ -38,15 +38,15 @@ public class SlotsController(LoadoutContext db) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(SlotRequest request)
     {
-        if (!await db.Components.AnyAsync(c => c.Id == request.ComponentId))
-            return BadRequest(new { error = "Component not found." });
+        if (!await db.ComponentTemplates.AnyAsync(t => t.Id == request.ComponentTemplateId))
+            return BadRequest(new { error = "ComponentTemplate not found." });
 
         if (!await db.AttachmentTypes.AnyAsync(a => a.Id == request.AttachmentTypeId))
             return BadRequest(new { error = "AttachmentType not found." });
 
         var slot = new Slot
         {
-            ComponentId = request.ComponentId,
+            ComponentTemplateId = request.ComponentTemplateId,
             AttachmentTypeId = request.AttachmentTypeId,
             Label = request.Label,
             PositionXPercent = request.PositionXPercent,
@@ -74,7 +74,7 @@ public class SlotsController(LoadoutContext db) : ControllerBase
         if (!await db.AttachmentTypes.AnyAsync(a => a.Id == request.AttachmentTypeId))
             return BadRequest(new { error = "AttachmentType not found." });
 
-        slot.ComponentId = request.ComponentId;
+        slot.ComponentTemplateId = request.ComponentTemplateId;
         slot.AttachmentTypeId = request.AttachmentTypeId;
         slot.Label = request.Label;
         slot.PositionXPercent = request.PositionXPercent;
