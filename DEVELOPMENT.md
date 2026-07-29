@@ -4,6 +4,8 @@ Dieses Dokument erklärt den aktuellen Stand des Projekts, die getroffenen Archi
 
 **Hinweis: Multi-PC-Entwicklung.** Dieses Projekt wird aktiv auf mehreren verschiedenen Rechnern entwickelt (aktuell drei), ohne dass die Rechner sich die lokale Entwicklungsumgebung teilen — synchronisiert wird ausschließlich über `git push`/`git pull`. Das bedeutet insbesondere: Die lokale SQLite-Datei (`loadout.db`) ist **pro Rechner separat**, nicht versioniert (`.gitignore`) und wird nie zwischen Rechnern übertragen. Wenn auf einem anderen PC neue EF-Core-Migrationen committet wurden, kann die lokale `loadout.db` auf diesem Rechner nach einem `git pull` veraltet/inkompatibel sein (z. B. `FOREIGN KEY constraint failed` beim Migrations-Apply) — siehe "Häufige Probleme" in Abschnitt 6. Lösung ist immer: `loadout.db*`-Dateien löschen, neu starten, Seed-Daten werden automatisch neu angelegt (keine echten Daten gehen verloren, da rein aus Code/Seed reproduzierbar).
 
+Gleiches Muster gilt für `frontend/node_modules`: Wenn auf einem anderen PC neue npm-Abhängigkeiten zu `package.json` hinzugefügt wurden (z. B. `react-konva`), zeigt sich das nach `git pull` auf diesem Rechner als Vite-Fehler `Failed to resolve import "..."`. Lösung: `npm install` im `frontend`-Ordner erneut ausführen; falls Vite den Fehler danach noch aus dem Cache anzeigt, zusätzlich `frontend/node_modules/.vite` löschen und den Dev-Server neu starten.
+
 ---
 
 ## Inhaltsverzeichnis
