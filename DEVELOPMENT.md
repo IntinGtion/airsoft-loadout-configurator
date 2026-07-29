@@ -2,6 +2,8 @@
 
 Dieses Dokument erklärt den aktuellen Stand des Projekts, die getroffenen Architekturentscheidungen und wie das Projekt auf einem neuen Rechner aufgesetzt wird.
 
+**Hinweis: Multi-PC-Entwicklung.** Dieses Projekt wird aktiv auf mehreren verschiedenen Rechnern entwickelt (aktuell drei), ohne dass die Rechner sich die lokale Entwicklungsumgebung teilen — synchronisiert wird ausschließlich über `git push`/`git pull`. Das bedeutet insbesondere: Die lokale SQLite-Datei (`loadout.db`) ist **pro Rechner separat**, nicht versioniert (`.gitignore`) und wird nie zwischen Rechnern übertragen. Wenn auf einem anderen PC neue EF-Core-Migrationen committet wurden, kann die lokale `loadout.db` auf diesem Rechner nach einem `git pull` veraltet/inkompatibel sein (z. B. `FOREIGN KEY constraint failed` beim Migrations-Apply) — siehe "Häufige Probleme" in Abschnitt 6. Lösung ist immer: `loadout.db*`-Dateien löschen, neu starten, Seed-Daten werden automatisch neu angelegt (keine echten Daten gehen verloren, da rein aus Code/Seed reproduzierbar).
+
 ---
 
 ## Inhaltsverzeichnis
@@ -358,6 +360,7 @@ Browser öffnen: **http://localhost:5173**
 |---|---|
 | `port already in use` | `Get-Process -Name dotnet | Stop-Process` (Backend) oder `npx kill-port 5173` (Frontend) |
 | `no such table` beim Start | `*.db`, `*.db-shm`, `*.db-wal` im Backend-Ordner löschen, dann neu starten |
+| `FOREIGN KEY constraint failed` beim Migrations-Apply | Typisch nach `git pull` auf einem der anderen Rechner (siehe Multi-PC-Hinweis in Abschnitt 1): lokale `loadout.db*` ist veraltet gegenüber neuen Migrationen. `loadout.db`, `loadout.db-shm`, `loadout.db-wal` löschen, neu starten |
 | SQLite Lock hängt | Alle `dotnet`-Prozesse killen, alle `loadout.db*`-Dateien löschen |
 | Migration fehlt nach Code-Änderung | `dotnet ef migrations add <Name>` im Backend-Ordner |
 
