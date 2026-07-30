@@ -308,7 +308,7 @@ export function CanvasView() {
   if (notFound) {
     return (
       <div className={styles.notFound}>
-        <p>Loadout not found. <Link to="/">Back to browse.</Link></p>
+        <p>Loadout not found. <Link to="/">Back to My Loadouts.</Link></p>
       </div>
     )
   }
@@ -325,7 +325,7 @@ export function CanvasView() {
                 : 'Drag a component from the catalog onto a highlighted slot'}
             </p>
           </div>
-          <Link className={styles.backLink} to={`/loadout/${loadoutId}`}>Back to list view</Link>
+          <Link className={styles.backLink} to="/">My Loadouts</Link>
         </header>
 
         <div className={styles.colorwayRow}>
@@ -355,8 +355,7 @@ export function CanvasView() {
           >
             {rootItems.length === 0 && (
               <div className={styles.emptyHint}>
-                Drag a base component here, or add one from the{' '}
-                <Link to={`/loadout/${loadoutId}`}>list view</Link>
+                Drag a base component here to start
               </div>
             )}
             <Stage

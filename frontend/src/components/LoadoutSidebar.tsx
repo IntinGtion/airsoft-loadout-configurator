@@ -20,7 +20,7 @@ export function LoadoutSidebar({ loadout, loading, onRemove }: Props) {
       {loading ? (
         <p className={styles.empty}>Loading…</p>
       ) : items.length === 0 ? (
-        <p className={styles.empty}>No items yet — add some from the list.</p>
+        <p className={styles.empty}>No items yet — drag some in from the catalog.</p>
       ) : (
         <ul className={styles.list}>
           {items.map(item => (

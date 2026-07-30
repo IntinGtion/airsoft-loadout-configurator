@@ -1,7 +1,5 @@
 import { Link, Route, Routes, useNavigate } from 'react-router-dom'
 import { api } from './api'
-import { ComponentBrowser } from './pages/ComponentBrowser'
-import { LoadoutBuilder } from './pages/LoadoutBuilder'
 import { LoadoutsPage } from './pages/LoadoutsPage'
 import { CanvasView } from './pages/CanvasView'
 import styles from './App.module.css'
@@ -19,10 +17,9 @@ export default function App() {
   return (
     <div className={styles.app}>
       <header className={styles.topbar}>
-        <span className={styles.logo}>⚙ Loadout Configurator</span>
+        <Link className={styles.logo} to="/">⚙ Loadout Configurator</Link>
         <nav className={styles.nav}>
-          <Link className={styles.navLink} to="/">Browse</Link>
-          <Link className={styles.navLink} to="/loadouts">My Loadouts</Link>
+          <Link className={styles.navLink} to="/">My Loadouts</Link>
         </nav>
         <button className={styles.newLoadoutBtn} onClick={handleNewLoadout}>
           + New Loadout
@@ -30,10 +27,8 @@ export default function App() {
       </header>
       <div className={styles.body}>
         <Routes>
-          <Route path="/" element={<ComponentBrowser />} />
-          <Route path="/loadouts" element={<LoadoutsPage onCreate={handleNewLoadout} />} />
-          <Route path="/loadout/:id" element={<LoadoutBuilder />} />
-          <Route path="/loadout/:id/canvas" element={<CanvasView />} />
+          <Route path="/" element={<LoadoutsPage onCreate={handleNewLoadout} />} />
+          <Route path="/loadout/:id" element={<CanvasView />} />
         </Routes>
       </div>
     </div>

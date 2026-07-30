@@ -112,11 +112,6 @@
   z-index: 1;
 }
 
-.emptyHint a {
-  color: var(--accent);
-  pointer-events: auto;
-}
-
 .loading {
   color: var(--text-muted);
   font-size: 0.9rem;
