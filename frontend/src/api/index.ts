@@ -66,6 +66,7 @@ export const api = {
     getById:         (id: number) => get<LoadoutResponse>(`/loadouts/${id}`),
     getByShareToken: (token: string) => get<LoadoutResponse>(`/loadouts/share/${token}`),
     create:          (name: string) => post<LoadoutSummary>('/loadouts', { name }),
+    remove:          (id: number) => del(`/loadouts/${id}`),
     addItem: (loadoutId: number, componentId: number, parentSlotId: number | null) =>
       post<LoadoutItemResponse>(`/loadouts/${loadoutId}/items`, { componentId, parentSlotId }),
     moveItem: (loadoutId: number, itemId: number, componentId: number, parentSlotId: number | null) =>

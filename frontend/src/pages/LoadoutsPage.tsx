@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import type { ComponentResponse, LoadoutResponse } from '../api/types'
@@ -37,6 +37,19 @@ export function LoadoutsPage({ onCreate }: Props) {
     }
   }, [])
 
+  async function handleDelete(e: MouseEvent, loadout: LoadoutResponse) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!window.confirm(`Delete "${loadout.name}"? This can't be undone.`)) return
+    setError(null)
+    try {
+      await api.loadouts.remove(loadout.id)
+      setLoadouts(current => current?.filter(l => l.id !== loadout.id) ?? current)
+    } catch (err) {
+      setError(String(err))
+    }
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -63,6 +76,13 @@ export function LoadoutsPage({ onCreate }: Props) {
             <Link key={l.id} to={`/loadout/${l.id}`} className={styles.card}>
               <div className={styles.thumbWrap}>
                 <LoadoutThumbnail loadout={l} componentsById={componentsById} />
+                <button
+                  className={styles.deleteBtn}
+                  onClick={e => handleDelete(e, l)}
+                  title="Delete loadout"
+                >
+                  ×
+                </button>
               </div>
               <div className={styles.cardInfo}>
                 <h3 className={styles.cardName}>{l.name}</h3>

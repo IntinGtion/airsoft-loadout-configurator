@@ -84,9 +84,30 @@
 }
 
 .thumbWrap {
+  position: relative;
   height: 150px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
+}
+
+.deleteBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1px solid #0f1117;
+  background: #f87171;
+  color: #0f1117;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.deleteBtn:hover {
+  transform: scale(1.1);
 }
 
 .cardInfo {
