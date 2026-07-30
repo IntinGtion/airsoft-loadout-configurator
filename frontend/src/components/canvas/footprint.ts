@@ -4,7 +4,7 @@ import type { ComponentResponse, MountPointResponse, SlotResponse } from '../../
 // convention shared with the backend (LoadoutsController.ComputeFootprint):
 // smallest grid row, then smallest grid column. Returns null for components with
 // no grid-based mount points (nothing to anchor by).
-function getAnchorMountPoint(component: ComponentResponse): MountPointResponse | null {
+export function getAnchorMountPoint(component: ComponentResponse): MountPointResponse | null {
   const gridMountPoints = component.mountPoints.filter(
     m => m.gridColumn != null && m.gridRow != null
   )
@@ -54,4 +54,42 @@ export function computeFootprintSlotIds(
     slotIds.add(match.id)
   }
   return slotIds
+}
+
+export interface FootprintPreviewSlot {
+  slotId: number
+  // Whether this specific target slot's AttachmentType matches the mount point
+  // that would land on it — geometry alone (existing at all) isn't enough, the
+  // caller also needs this to decide compatible (cyan) vs. incompatible (red).
+  typeMatches: boolean
+}
+
+// Same grid-delta matching as computeFootprintSlotIds, but reports each mount
+// point's result individually instead of failing all-or-nothing — used to
+// preview a multi-mount-point component's full footprint while still dragging,
+// before the user commits to a drop. Mount points with no geometric match at
+// all (off the parent's grid) are simply omitted, since there's no slot to
+// highlight for them.
+export function computeFootprintPreview(
+  childComponent: ComponentResponse,
+  anchorSlot: { gridColumn: number | null; gridRow: number | null },
+  parentSlots: SlotResponse[]
+): FootprintPreviewSlot[] {
+  const gridMountPoints = childComponent.mountPoints.filter(
+    m => m.gridColumn != null && m.gridRow != null
+  )
+  const anchorMountPoint = getAnchorMountPoint(childComponent)
+
+  if (!anchorMountPoint || anchorSlot.gridColumn == null || anchorSlot.gridRow == null) {
+    return []
+  }
+
+  const results: FootprintPreviewSlot[] = []
+  for (const mp of gridMountPoints) {
+    const targetColumn = anchorSlot.gridColumn + (mp.gridColumn! - anchorMountPoint.gridColumn!)
+    const targetRow = anchorSlot.gridRow + (mp.gridRow! - anchorMountPoint.gridRow!)
+    const match = parentSlots.find(s => s.gridColumn === targetColumn && s.gridRow === targetRow)
+    if (match) results.push({ slotId: match.id, typeMatches: match.attachmentTypeId === mp.attachmentTypeId })
+  }
+  return results
 }

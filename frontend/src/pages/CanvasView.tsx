@@ -10,7 +10,7 @@ import { CanvasNode, CHILD_DISPLAY_WIDTH_FALLBACK, type DropCandidate } from '..
 import { COLORWAYS } from '../components/canvas/colorways'
 import { getDisplayWidth } from '../components/canvas/scale'
 import { getRecoloredSvgUrl } from '../components/canvas/recolorSvg'
-import { getAnchorMountPointPercent } from '../components/canvas/footprint'
+import { getAnchorMountPointPercent, computeFootprintPreview } from '../components/canvas/footprint'
 import styles from './CanvasView.module.css'
 
 const STAGE_WIDTH = 640
@@ -45,10 +45,12 @@ export function CanvasView() {
   const [dragging, setDragging] = useState<DraggingItem | null>(null)
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const [dragOver, setDragOver] = useState(false)
-  // The slot nearest the cursor while dragging a catalog item, so it can be
-  // highlighted before the user commits to dropping there — avoids the old
-  // guess-and-check cycle where a miss only surfaced as an error afterwards.
-  const [hoveredSlot, setHoveredSlot] = useState<{ id: number; compatible: boolean } | null>(null)
+  // Every slot the dragged catalog item's full footprint would land on (not
+  // just the anchor slot nearest the cursor), keyed by whether that slot would
+  // actually accept it — lets the user see the whole multi-mount-point shape
+  // (e.g. all 8 MOLLE straps of a pouch) before committing to a drop, instead
+  // of the old guess-and-check cycle where a miss only surfaced afterwards.
+  const [hoveredSlots, setHoveredSlots] = useState<Map<number, boolean>>(new Map())
   const stageWrapRef = useRef<HTMLDivElement | null>(null)
 
   const { categories, components: catalog, selected, setSelected } = useComponents()
@@ -234,14 +236,35 @@ export function CanvasView() {
       setDragOver(over)
 
       const nearest = over && rect ? findNearestFreeSlot(e.clientX - rect.left, e.clientY - rect.top) : null
-      if (!nearest) {
-        setHoveredSlot(null)
+      if (!nearest || !draggingComponent) {
+        setHoveredSlots(new Map())
         return
       }
-      const compatible = draggingComponent?.acceptedAttachmentTypes.some(
-        t => t.id === nearest.attachmentTypeId
-      ) ?? false
-      setHoveredSlot({ id: nearest.id, compatible })
+
+      const preview = computeFootprintPreview(
+        draggingComponent,
+        { gridColumn: nearest.gridColumn, gridRow: nearest.gridRow },
+        nearest.parentSlots
+      )
+
+      if (preview.length === 0) {
+        // No grid-based footprint to project (e.g. a single-slot component) —
+        // fall back to the plain type check against just the anchor slot.
+        const compatible = draggingComponent.acceptedAttachmentTypes.some(
+          t => t.id === nearest.attachmentTypeId
+        )
+        setHoveredSlots(new Map([[nearest.id, compatible]]))
+        return
+      }
+
+      setHoveredSlots(
+        new Map(
+          preview.map(p => [
+            p.slotId,
+            p.typeMatches && slotPositions.current.get(p.slotId)?.occupiedByItemId == null,
+          ])
+        )
+      )
     }
 
     function handleUp(e: MouseEvent) {
@@ -251,7 +274,7 @@ export function CanvasView() {
       setDragging(null)
       setDragPos(null)
       setDragOver(false)
-      setHoveredSlot(null)
+      setHoveredSlots(new Map())
 
       if (dropInStage && rect && dragging) {
         placeComponent(dragging.componentId, e.clientX - rect.left, e.clientY - rect.top)
@@ -276,6 +299,11 @@ export function CanvasView() {
   const dragPreviewHeight = dragNaturalSize ? dragPreviewWidth * (dragNaturalSize.h / dragNaturalSize.w) : null
   const dragOffsetX = (dragAnchor.x / 100) * dragPreviewWidth
   const dragOffsetY = dragPreviewHeight != null ? (dragAnchor.y / 100) * dragPreviewHeight : 0
+  // The ghost itself only has one glow color, so a multi-slot footprint (e.g.
+  // the pouch's 8 MOLLE straps) reads as compatible only if every one of its
+  // slots would actually accept it — one conflicting slot is enough to flag
+  // the whole prospective drop as a problem.
+  const hoveredAllCompatible = hoveredSlots.size > 0 && [...hoveredSlots.values()].every(Boolean)
 
   if (notFound) {
     return (
@@ -360,8 +388,7 @@ export function CanvasView() {
                       onSelectItem={setSelectedItemId}
                       onDeleteItem={handleRemoveItem}
                       onItemDragEnd={moveExistingItem}
-                      hoveredSlotId={hoveredSlot?.id ?? null}
-                      hoveredSlotCompatible={hoveredSlot?.compatible ?? false}
+                      hoveredSlots={hoveredSlots}
                     />
                   )
                 })}
@@ -398,8 +425,8 @@ export function CanvasView() {
           {dragPreviewUrl && (
             <div
               className={`${styles.dragGhostImageWrap} ${
-                hoveredSlot
-                  ? hoveredSlot.compatible
+                hoveredSlots.size > 0
+                  ? hoveredAllCompatible
                     ? styles.dragGhostImageWrapCompatible
                     : styles.dragGhostImageWrapIncompatible
                   : ''
@@ -428,6 +455,31 @@ export function CanvasView() {
           <span className={styles.dragGhostLabel}>{dragging.name}</span>
         </div>
       )}
+
+      {/* The footprint dots sit exactly where the dragged component's own body
+          renders (that's the point — the pouch is meant to land there), so they'd
+          be completely hidden under the opaque drag ghost if drawn on the Konva
+          Stage like the normal SlotMarker hover ring. Rendered here instead, as a
+          plain HTML overlay stacked above the ghost (z-index in CSS), the same fix
+          already applied to the single-slot case but generalized to N slots. */}
+      {dragging && hoveredSlots.size > 0 && stageWrapRef.current && (() => {
+        const rect = stageWrapRef.current.getBoundingClientRect()
+        return (
+          <div className={styles.footprintOverlay} style={{ left: rect.left, top: rect.top }}>
+            {[...hoveredSlots.entries()].map(([slotId, compatible]) => {
+              const pos = slotPositions.current.get(slotId)
+              if (!pos) return null
+              return (
+                <span
+                  key={slotId}
+                  className={compatible ? styles.footprintDotCompatible : styles.footprintDotIncompatible}
+                  style={{ left: pos.x, top: pos.y }}
+                />
+              )
+            })}
+          </div>
+        )
+      })()}
     </div>
   )
 }

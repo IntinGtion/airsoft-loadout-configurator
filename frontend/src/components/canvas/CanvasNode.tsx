@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Circle, Group, Rect, Text } from 'react-konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
-import type { ComponentResponse, LoadoutItemResponse } from '../../api/types'
+import type { ComponentResponse, LoadoutItemResponse, SlotResponse } from '../../api/types'
 import { ComponentSprite } from './ComponentSprite'
 import { SlotMarker } from './SlotMarker'
 import { computeFootprintSlotIds, getAnchorMountPointPercent } from './footprint'
@@ -14,6 +14,8 @@ export const CHILD_DISPLAY_WIDTH_FALLBACK = 64
 export interface DropCandidate {
   id: number
   attachmentTypeId: number
+  gridColumn: number | null
+  gridRow: number | null
   x: number
   y: number
   // The LoadoutItem currently occupying this slot (via its own footprint), if any.
@@ -21,6 +23,10 @@ export interface DropCandidate {
   // item being moved itself" (fine to drop back onto) from "occupied by something
   // else" (not a valid target).
   occupiedByItemId: number | null
+  // The full slot list of the component this slot belongs to — needed to resolve
+  // a multi-mount-point component's whole footprint (computeFootprintPreview)
+  // once a nearest anchor slot has been picked, not just this one candidate.
+  parentSlots: SlotResponse[]
 }
 
 interface Props {
@@ -42,11 +48,12 @@ interface Props {
   onSelectItem: (itemId: number | null) => void
   onDeleteItem: (itemId: number) => void
   onItemDragEnd: (itemId: number, componentId: number, anchorStageX: number, anchorStageY: number) => void
-  // The slot currently nearest the cursor during a catalog drag, and whether
-  // the dragged component would actually be accepted there — null/false when
-  // nothing is being dragged or the cursor isn't near any slot.
-  hoveredSlotId: number | null
-  hoveredSlotCompatible: boolean
+  // Every slot that the component currently being dragged from the catalog
+  // would occupy if dropped at its current cursor position (its whole
+  // footprint, not just the anchor slot under the cursor), keyed by whether
+  // that particular slot would actually accept it. Empty when nothing is
+  // being dragged or the cursor isn't near any slot.
+  hoveredSlots: Map<number, boolean>
 }
 
 export function CanvasNode({
@@ -64,8 +71,7 @@ export function CanvasNode({
   onSelectItem,
   onDeleteItem,
   onItemDragEnd,
-  hoveredSlotId,
-  hoveredSlotCompatible,
+  hoveredSlots,
 }: Props) {
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const height = naturalSize ? width * (naturalSize.h / naturalSize.w) : null
@@ -100,9 +106,12 @@ export function CanvasNode({
       component.slots.map(slot => ({
         id: slot.id,
         attachmentTypeId: slot.attachmentTypeId,
+        gridColumn: slot.gridColumn,
+        gridRow: slot.gridRow,
         x: x + (slot.positionXPercent / 100) * width,
         y: y + (slot.positionYPercent / 100) * height,
         occupiedByItemId: occupiedByItemId.get(slot.id) ?? childItemsBySlotId.get(slot.id)?.id ?? null,
+        parentSlots: component.slots,
       }))
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -153,7 +162,8 @@ export function CanvasNode({
           if (childItemsBySlotId.has(slot.id)) return null
           const sx = x + (slot.positionXPercent / 100) * width
           const sy = y + (slot.positionYPercent / 100) * height
-          const hover = slot.id === hoveredSlotId ? (hoveredSlotCompatible ? 'compatible' : 'incompatible') : null
+          const hoverCompatible = hoveredSlots.get(slot.id)
+          const hover = hoverCompatible === undefined ? null : hoverCompatible ? 'compatible' : 'incompatible'
           return (
             <SlotMarker key={slot.id} x={sx} y={sy} occupied={occupiedByItemId.has(slot.id)} hover={hover} />
           )
@@ -206,8 +216,7 @@ export function CanvasNode({
               onSelectItem={onSelectItem}
               onDeleteItem={onDeleteItem}
               onItemDragEnd={onItemDragEnd}
-              hoveredSlotId={hoveredSlotId}
-              hoveredSlotCompatible={hoveredSlotCompatible}
+              hoveredSlots={hoveredSlots}
             />
           )
         })}

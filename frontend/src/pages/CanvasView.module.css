@@ -251,6 +251,33 @@
   border: 1px solid #0f1117;
 }
 
+.footprintOverlay {
+  position: fixed;
+  pointer-events: none;
+  z-index: 150;
+}
+
+.footprintDotCompatible,
+.footprintDotIncompatible {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 50%;
+  border: 2px solid #0f1117;
+}
+
+.footprintDotCompatible {
+  background: #22d3ee;
+  box-shadow: 0 0 10px 3px rgba(34, 211, 238, 0.7);
+}
+
+.footprintDotIncompatible {
+  background: #f87171;
+  box-shadow: 0 0 10px 3px rgba(248, 113, 113, 0.7);
+}
+
 .dragGhostLabel {
   position: absolute;
   left: 14px;
