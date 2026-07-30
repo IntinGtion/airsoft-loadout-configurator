@@ -117,10 +117,26 @@ export function CanvasNode({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [component, x, y, width, height, occupiedByItemId])
 
+  // Live sprite position while being re-dragged to a new spot (or detached
+  // outright) — null whenever it's just sitting still. Own MountPoints (e.g.
+  // the pouch's 8 MOLLE straps) are only rendered while this is set, mirroring
+  // the dots shown on the drag ghost when first placing it from the catalog;
+  // this is the same feedback for the "already placed, pick it up again" path.
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+
+  function handleDragStart(e: KonvaEventObject<DragEvent>) {
+    setDragPos({ x: e.target.x(), y: e.target.y() })
+  }
+
+  function handleDragMove(e: KonvaEventObject<DragEvent>) {
+    setDragPos({ x: e.target.x(), y: e.target.y() })
+  }
+
   function handleDragEnd(e: KonvaEventObject<DragEvent>) {
     const node = e.target
     const newX = node.x()
     const newY = node.y()
+    setDragPos(null)
     // Snap back immediately — the real move only happens once the server
     // confirms it and the tree re-renders from fresh data. Without this, a
     // rejected or still-pending move would leave the sprite wherever Konva's
@@ -148,9 +164,30 @@ export function CanvasNode({
             e.cancelBubble = true
             onSelectItem(selectedItemId === itemId ? null : itemId)
           }}
+          onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
           onDragEnd={handleDragEnd}
         />
       )}
+
+      {/* Own MountPoints (the points THIS component docks with, not the Slots it
+          offers) only matter while it's actually being repositioned — otherwise
+          they'd just be redundant clutter sitting on top of an already-placed
+          sprite. Follows dragPos, not the resting x/y, so they track the sprite
+          live as it's dragged around, same as the catalog drag ghost's dots. */}
+      {dragPos && height != null &&
+        component.mountPoints.map(mp => (
+          <Circle
+            key={mp.id}
+            x={dragPos.x + (mp.positionXPercent / 100) * width}
+            y={dragPos.y + (mp.positionYPercent / 100) * height}
+            radius={4}
+            fill="#e8eaf0"
+            stroke="#0f1117"
+            strokeWidth={1}
+            listening={false}
+          />
+        ))}
 
       {/* Own slot markers render after (so, on top of, in Konva's paint order) this
           node's own sprite — otherwise the base image would hide its own dots.

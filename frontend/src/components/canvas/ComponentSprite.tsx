@@ -14,6 +14,8 @@ interface Props {
   draggable?: boolean
   onLoad?: (naturalWidth: number, naturalHeight: number) => void
   onClick?: (e: KonvaEventObject<MouseEvent>) => void
+  onDragStart?: (e: KonvaEventObject<DragEvent>) => void
+  onDragMove?: (e: KonvaEventObject<DragEvent>) => void
   onDragEnd?: (e: KonvaEventObject<DragEvent>) => void
 }
 
@@ -27,6 +29,8 @@ export function ComponentSprite({
   draggable = false,
   onLoad,
   onClick,
+  onDragStart,
+  onDragMove,
   onDragEnd,
 }: Props) {
   const [resolvedUrl, setResolvedUrl] = useState(url)
@@ -61,6 +65,8 @@ export function ComponentSprite({
       opacity={opacity}
       draggable={draggable}
       onClick={onClick}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     />
   )
