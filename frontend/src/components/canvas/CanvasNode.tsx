@@ -47,6 +47,12 @@ interface Props {
   selectedItemId: number | null
   onSelectItem: (itemId: number | null) => void
   onDeleteItem: (itemId: number) => void
+  // Fired continuously while an already-placed item is being re-dragged (not
+  // just at the end), so the same footprint-preview highlighting used for a
+  // fresh catalog drag also applies here — passes itemId along so the hover
+  // computation can treat this item's own currently-occupied slots as free
+  // (matching the drop-time logic in moveExistingItem).
+  onItemDragMove: (component: ComponentResponse, itemId: number, anchorStageX: number, anchorStageY: number) => void
   onItemDragEnd: (itemId: number, componentId: number, anchorStageX: number, anchorStageY: number) => void
   // Every slot that the component currently being dragged from the catalog
   // would occupy if dropped at its current cursor position (its whole
@@ -70,6 +76,7 @@ export function CanvasNode({
   selectedItemId,
   onSelectItem,
   onDeleteItem,
+  onItemDragMove,
   onItemDragEnd,
   hoveredSlots,
 }: Props) {
@@ -124,12 +131,23 @@ export function CanvasNode({
   // this is the same feedback for the "already placed, pick it up again" path.
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
 
+  function reportDrag(node: KonvaEventObject<DragEvent>['target']) {
+    const nx = node.x()
+    const ny = node.y()
+    setDragPos({ x: nx, y: ny })
+    if (height != null) {
+      const anchorStageX = nx + (anchorPercent.x / 100) * width
+      const anchorStageY = ny + (anchorPercent.y / 100) * height
+      onItemDragMove(component, itemId, anchorStageX, anchorStageY)
+    }
+  }
+
   function handleDragStart(e: KonvaEventObject<DragEvent>) {
-    setDragPos({ x: e.target.x(), y: e.target.y() })
+    reportDrag(e.target)
   }
 
   function handleDragMove(e: KonvaEventObject<DragEvent>) {
-    setDragPos({ x: e.target.x(), y: e.target.y() })
+    reportDrag(e.target)
   }
 
   function handleDragEnd(e: KonvaEventObject<DragEvent>) {
@@ -208,10 +226,21 @@ export function CanvasNode({
 
       {selectedItemId === itemId && height != null && (
         <>
-          <Rect x={x} y={y} width={width} height={height} stroke="#6ee7a0" strokeWidth={2} listening={false} />
+          {/* Follows dragPos while being re-dragged — without this the border stayed
+              pinned to the old resting spot while the sprite itself moved live under
+              the cursor, visibly detaching from the thing it's supposed to outline. */}
+          <Rect
+            x={dragPos?.x ?? x}
+            y={dragPos?.y ?? y}
+            width={width}
+            height={height}
+            stroke="#6ee7a0"
+            strokeWidth={2}
+            listening={false}
+          />
           <Group
-            x={x + width - 2}
-            y={y - 2}
+            x={(dragPos?.x ?? x) + width - 2}
+            y={(dragPos?.y ?? y) - 2}
             onClick={e => {
               e.cancelBubble = true
               onDeleteItem(itemId)
@@ -252,6 +281,7 @@ export function CanvasNode({
               selectedItemId={selectedItemId}
               onSelectItem={onSelectItem}
               onDeleteItem={onDeleteItem}
+              onItemDragMove={onItemDragMove}
               onItemDragEnd={onItemDragEnd}
               hoveredSlots={hoveredSlots}
             />

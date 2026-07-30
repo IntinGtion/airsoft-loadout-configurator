@@ -122,21 +122,61 @@ export function CanvasView() {
     return map
   }, [loadout])
 
-  const placeComponent = useCallback(async (componentId: number, dropX: number, dropY: number) => {
-    setError(null)
-
+  // Shared by every drag path (fresh catalog drop, live hover preview for
+  // either kind of drag, and an existing item's own move): nearest slot to a
+  // stage point that isn't occupied by something else. `excludeItemId` lets a
+  // move treat the item's own currently-occupied slots as free, so it can
+  // hover/drop back near its own footprint instead of always reading as blocked.
+  const findNearestFreeSlot = useCallback((stageX: number, stageY: number, excludeItemId?: number): DropCandidate | null => {
     let nearest: DropCandidate | null = null
     let nearestDist = Infinity
     for (const candidate of slotPositions.current.values()) {
-      if (candidate.occupiedByItemId != null) continue
-      const dist = Math.hypot(candidate.x - dropX, candidate.y - dropY)
+      if (candidate.occupiedByItemId != null && candidate.occupiedByItemId !== excludeItemId) continue
+      const dist = Math.hypot(candidate.x - stageX, candidate.y - stageY)
       if (dist < nearestDist) {
         nearestDist = dist
         nearest = candidate
       }
     }
+    return nearest && nearestDist <= DROP_SNAP_DISTANCE ? nearest : null
+  }, [])
 
-    if (nearest && nearestDist <= DROP_SNAP_DISTANCE) {
+  // Full footprint preview (cyan/red per slot) for a component hovering at a
+  // stage position — used for both the catalog drag and an existing item's own
+  // move, so the two feel consistent instead of only the first placement
+  // showing which slots would actually be occupied.
+  const computeHoverSlots = useCallback((component: ComponentResponse, stageX: number, stageY: number, excludeItemId?: number): Map<number, boolean> => {
+    const nearest = findNearestFreeSlot(stageX, stageY, excludeItemId)
+    if (!nearest) return new Map()
+
+    const preview = computeFootprintPreview(
+      component,
+      { gridColumn: nearest.gridColumn, gridRow: nearest.gridRow },
+      nearest.parentSlots
+    )
+
+    if (preview.length === 0) {
+      // No grid-based footprint to project (e.g. a single-slot component) —
+      // fall back to the plain type check against just the anchor slot.
+      const compatible = component.acceptedAttachmentTypes.some(t => t.id === nearest.attachmentTypeId)
+      return new Map([[nearest.id, compatible]])
+    }
+
+    return new Map(
+      preview.map(p => {
+        const occupiedBy = slotPositions.current.get(p.slotId)?.occupiedByItemId
+        const free = occupiedBy == null || occupiedBy === excludeItemId
+        return [p.slotId, p.typeMatches && free]
+      })
+    )
+  }, [findNearestFreeSlot])
+
+  const placeComponent = useCallback(async (componentId: number, dropX: number, dropY: number) => {
+    setError(null)
+
+    const nearest = findNearestFreeSlot(dropX, dropY)
+
+    if (nearest) {
       try {
         await api.loadouts.addItem(loadoutId, componentId, nearest.id)
         reload()
@@ -159,7 +199,7 @@ export function CanvasView() {
     }
 
     setError('No attachment slot near where you dropped that.')
-  }, [loadoutId, reload, rootItems.length])
+  }, [loadoutId, reload, rootItems.length, findNearestFreeSlot])
 
   // Moving an already-placed item: unlike placeComponent, a slot the item itself
   // already occupies (via its own footprint) doesn't block it — you can drop it
@@ -167,19 +207,13 @@ export function CanvasView() {
   // independent item rather than only doing so when the canvas is empty.
   const moveExistingItem = useCallback(async (itemId: number, componentId: number, dropX: number, dropY: number) => {
     setError(null)
+    // Cleared synchronously, before the request even goes out — same as the
+    // catalog-drag mouseup handler — so the preview never lingers after the
+    // user has already let go, regardless of network latency.
+    setHoveredSlots(new Map())
 
-    let nearest: DropCandidate | null = null
-    let nearestDist = Infinity
-    for (const candidate of slotPositions.current.values()) {
-      if (candidate.occupiedByItemId != null && candidate.occupiedByItemId !== itemId) continue
-      const dist = Math.hypot(candidate.x - dropX, candidate.y - dropY)
-      if (dist < nearestDist) {
-        nearestDist = dist
-        nearest = candidate
-      }
-    }
-
-    const targetSlotId = nearest && nearestDist <= DROP_SNAP_DISTANCE ? nearest.id : null
+    const nearest = findNearestFreeSlot(dropX, dropY, itemId)
+    const targetSlotId = nearest?.id ?? null
 
     try {
       await api.loadouts.moveItem(loadoutId, itemId, componentId, targetSlotId)
@@ -187,7 +221,14 @@ export function CanvasView() {
     } catch (err) {
       setError(String(err))
     }
-  }, [loadoutId, reload])
+  }, [loadoutId, reload, findNearestFreeSlot])
+
+  // Live footprint preview while re-dragging an already-placed item — same
+  // highlighting the catalog drag gets, just fed from CanvasNode's Konva-native
+  // drag events instead of the window-level mouse handlers below.
+  const handleItemDragMove = useCallback((component: ComponentResponse, itemId: number, anchorStageX: number, anchorStageY: number) => {
+    setHoveredSlots(computeHoverSlots(component, anchorStageX, anchorStageY, itemId))
+  }, [computeHoverSlots])
 
   const handleRemoveItem = useCallback(async (itemId: number) => {
     setError(null)
@@ -215,56 +256,18 @@ export function CanvasView() {
       return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
     }
 
-    function findNearestFreeSlot(stageX: number, stageY: number): DropCandidate | null {
-      let nearest: DropCandidate | null = null
-      let nearestDist = Infinity
-      for (const candidate of slotPositions.current.values()) {
-        if (candidate.occupiedByItemId != null) continue
-        const dist = Math.hypot(candidate.x - stageX, candidate.y - stageY)
-        if (dist < nearestDist) {
-          nearestDist = dist
-          nearest = candidate
-        }
-      }
-      return nearest && nearestDist <= DROP_SNAP_DISTANCE ? nearest : null
-    }
-
     function handleMove(e: MouseEvent) {
       setDragPos({ x: e.clientX, y: e.clientY })
       const rect = stageWrapRef.current?.getBoundingClientRect()
       const over = isOverStage(e.clientX, e.clientY)
       setDragOver(over)
 
-      const nearest = over && rect ? findNearestFreeSlot(e.clientX - rect.left, e.clientY - rect.top) : null
-      if (!nearest || !draggingComponent) {
+      if (!over || !rect || !draggingComponent) {
         setHoveredSlots(new Map())
         return
       }
 
-      const preview = computeFootprintPreview(
-        draggingComponent,
-        { gridColumn: nearest.gridColumn, gridRow: nearest.gridRow },
-        nearest.parentSlots
-      )
-
-      if (preview.length === 0) {
-        // No grid-based footprint to project (e.g. a single-slot component) —
-        // fall back to the plain type check against just the anchor slot.
-        const compatible = draggingComponent.acceptedAttachmentTypes.some(
-          t => t.id === nearest.attachmentTypeId
-        )
-        setHoveredSlots(new Map([[nearest.id, compatible]]))
-        return
-      }
-
-      setHoveredSlots(
-        new Map(
-          preview.map(p => [
-            p.slotId,
-            p.typeMatches && slotPositions.current.get(p.slotId)?.occupiedByItemId == null,
-          ])
-        )
-      )
+      setHoveredSlots(computeHoverSlots(draggingComponent, e.clientX - rect.left, e.clientY - rect.top))
     }
 
     function handleUp(e: MouseEvent) {
@@ -287,7 +290,7 @@ export function CanvasView() {
       window.removeEventListener('mousemove', handleMove)
       window.removeEventListener('mouseup', handleUp)
     }
-  }, [dragging, placeComponent, draggingComponent])
+  }, [dragging, placeComponent, draggingComponent, computeHoverSlots])
 
   // Anchor the ghost preview on the component's own anchor mount point (not its
   // top-left corner or visual center) so the cursor sits exactly where it would
@@ -386,6 +389,7 @@ export function CanvasView() {
                       selectedItemId={selectedItemId}
                       onSelectItem={setSelectedItemId}
                       onDeleteItem={handleRemoveItem}
+                      onItemDragMove={handleItemDragMove}
                       onItemDragEnd={moveExistingItem}
                       hoveredSlots={hoveredSlots}
                     />
@@ -460,8 +464,13 @@ export function CanvasView() {
           be completely hidden under the opaque drag ghost if drawn on the Konva
           Stage like the normal SlotMarker hover ring. Rendered here instead, as a
           plain HTML overlay stacked above the ghost (z-index in CSS), the same fix
-          already applied to the single-slot case but generalized to N slots. */}
-      {dragging && hoveredSlots.size > 0 && stageWrapRef.current && (() => {
+          already applied to the single-slot case but generalized to N slots.
+          Not gated on `dragging` (that's only ever true for a fresh catalog drag)
+          since hoveredSlots now also gets populated while re-dragging an
+          already-placed item via CanvasNode's own Konva drag — it's empty
+          whenever neither kind of drag is producing a preview, so this alone is
+          a sufficient and simpler condition than tracking which drag is active. */}
+      {hoveredSlots.size > 0 && stageWrapRef.current && (() => {
         const rect = stageWrapRef.current.getBoundingClientRect()
         return (
           <div className={styles.footprintOverlay} style={{ left: rect.left, top: rect.top }}>
