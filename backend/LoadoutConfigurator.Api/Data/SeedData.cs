@@ -128,14 +128,14 @@ public static class SeedData
             AcceptedAttachmentTypes = [molle],
             MountPoints =
             [
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-1", PositionXPercent = 56.41f, PositionYPercent = 17.74f, GridColumn = 1, GridRow = 1 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-2", PositionXPercent = 56.41f, PositionYPercent = 40.04f, GridColumn = 1, GridRow = 2 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-3", PositionXPercent = 56.41f, PositionYPercent = 62.98f, GridColumn = 1, GridRow = 3 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-4", PositionXPercent = 56.41f, PositionYPercent = 85.73f, GridColumn = 1, GridRow = 4 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-1", PositionXPercent = 86.53f, PositionYPercent = 17.74f, GridColumn = 2, GridRow = 1 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-2", PositionXPercent = 86.53f, PositionYPercent = 40.04f, GridColumn = 2, GridRow = 2 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-3", PositionXPercent = 86.53f, PositionYPercent = 62.98f, GridColumn = 2, GridRow = 3 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-4", PositionXPercent = 86.53f, PositionYPercent = 85.73f, GridColumn = 2, GridRow = 4 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-1", PositionXPercent = 27.24f, PositionYPercent = 17.74f, GridColumn = 1, GridRow = 1 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-2", PositionXPercent = 27.24f, PositionYPercent = 40.04f, GridColumn = 1, GridRow = 2 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-3", PositionXPercent = 27.24f, PositionYPercent = 62.98f, GridColumn = 1, GridRow = 3 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-4", PositionXPercent = 27.24f, PositionYPercent = 85.73f, GridColumn = 1, GridRow = 4 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-1", PositionXPercent = 72.59f, PositionYPercent = 17.74f, GridColumn = 2, GridRow = 1 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-2", PositionXPercent = 72.59f, PositionYPercent = 40.04f, GridColumn = 2, GridRow = 2 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-3", PositionXPercent = 72.59f, PositionYPercent = 62.98f, GridColumn = 2, GridRow = 3 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-4", PositionXPercent = 72.59f, PositionYPercent = 85.73f, GridColumn = 2, GridRow = 4 },
             ]
         };
         var m4FastMagPouch = new Component
