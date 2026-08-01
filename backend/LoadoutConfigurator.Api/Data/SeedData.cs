@@ -117,37 +117,35 @@ public static class SeedData
         };
 
         // ── Pouch ────────────────────────────────────────────────────────────
-        // RealWidthMm derived the same MOLLE-grid-pitch way as the plate carrier above:
-        // column-pitch-based ≈84mm, row-pitch-based ≈83mm — close agreement here since
-        // this grid has no zone gap like the plate carrier's chest/torso split.
-        var openFastMagPouchTemplate = new ComponentTemplate
+        // RealWidthMm from MOLLE row pitch (avg 176.3px = 25.4mm → 1px = 0.144mm,
+        // SVG width 581px × 0.144 ≈ 84mm). MountPoint coordinates derived directly
+        // from SVG connector-bar clip centers (viewBox 0 0 581 778) — no Figma API used.
+        var m4FastMagPouchTemplate = new ComponentTemplate
         {
-            Name = "Open Fast Mag Pouch",
+            Name = "M4 Fast Mag Pouch",
             RealWidthMm = 84,
-            SvgAssetPath = "/components/open-fast-mag-pouch.svg",
+            SvgAssetPath = "/components/m4-fast-mag-pouch.svg",
             AcceptedAttachmentTypes = [molle],
-            // MountPoints aus Figma-Datei "M4 Pouch MVP": eigene MOLLE-Straps auf der
-            // Rückseite, mit denen die Pouch am Plattenträger andockt.
             MountPoints =
             [
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-1", PositionXPercent = 27.05f, PositionYPercent = 14.02f, GridColumn = 1, GridRow = 1 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-2", PositionXPercent = 27.82f, PositionYPercent = 31.8f, GridColumn = 1, GridRow = 2 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-3", PositionXPercent = 27.05f, PositionYPercent = 50.04f, GridColumn = 1, GridRow = 3 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-4", PositionXPercent = 27.05f, PositionYPercent = 67.82f, GridColumn = 1, GridRow = 4 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-1", PositionXPercent = 72.44f, PositionYPercent = 14.02f, GridColumn = 2, GridRow = 1 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-2", PositionXPercent = 72.44f, PositionYPercent = 31.8f, GridColumn = 2, GridRow = 2 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-3", PositionXPercent = 72.44f, PositionYPercent = 50.04f, GridColumn = 2, GridRow = 3 },
-                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-4", PositionXPercent = 72.44f, PositionYPercent = 67.97f, GridColumn = 2, GridRow = 4 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-1", PositionXPercent = 56.41f, PositionYPercent = 17.74f, GridColumn = 1, GridRow = 1 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-2", PositionXPercent = 56.41f, PositionYPercent = 40.04f, GridColumn = 1, GridRow = 2 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-3", PositionXPercent = 56.41f, PositionYPercent = 62.98f, GridColumn = 1, GridRow = 3 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 1-4", PositionXPercent = 56.41f, PositionYPercent = 85.73f, GridColumn = 1, GridRow = 4 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-1", PositionXPercent = 86.53f, PositionYPercent = 17.74f, GridColumn = 2, GridRow = 1 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-2", PositionXPercent = 86.53f, PositionYPercent = 40.04f, GridColumn = 2, GridRow = 2 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-3", PositionXPercent = 86.53f, PositionYPercent = 62.98f, GridColumn = 2, GridRow = 3 },
+                new MountPoint { AttachmentType = molle, Label = "MOLLE 2-4", PositionXPercent = 86.53f, PositionYPercent = 85.73f, GridColumn = 2, GridRow = 4 },
             ]
         };
-        var openFastMagPouch = new Component
+        var m4FastMagPouch = new Component
         {
             Category = catPouch,
-            ComponentTemplate = openFastMagPouchTemplate,
-            Name = "Open Fast Mag Pouch",
+            ComponentTemplate = m4FastMagPouchTemplate,
+            Name = "M4 Fast Mag Pouch",
         };
 
-        db.Components.AddRange(jpc, openFastMagPouch);
+        db.Components.AddRange(jpc, m4FastMagPouch);
 
         await db.SaveChangesAsync();
     }
