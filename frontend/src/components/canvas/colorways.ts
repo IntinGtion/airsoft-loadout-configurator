@@ -1,13 +1,18 @@
+export type ColorwayFill =
+  | { type: 'solid'; hex: string }
+  | { type: 'texture'; url: string }
+
 export interface Colorway {
+  id: string
   name: string
-  hex: string | null // null = each component's own authored color
+  fill: ColorwayFill | null  // null = use the asset's own authored colors
 }
 
-// Solid recolors only — a real Multicam swap would need a pattern fill, not a flat
-// hex, which the current SVG-text recolor approach (recolorSvg.ts) can't produce.
 export const COLORWAYS: Colorway[] = [
-  { name: 'Original', hex: null },
-  { name: 'Ranger Green', hex: '#4b5320' },
-  { name: 'Coyote Tan', hex: '#8a7355' },
-  { name: 'Black', hex: '#1c1c1c' },
+  { id: 'original',     name: 'Original',     fill: null },
+  { id: 'ranger-green', name: 'Ranger Green',  fill: { type: 'solid',   hex: '#4b5320' } },
+  { id: 'coyote-tan',   name: 'Coyote Tan',    fill: { type: 'solid',   hex: '#8a7355' } },
+  { id: 'black',        name: 'Black',          fill: { type: 'solid',   hex: '#1c1c1c' } },
+  { id: 'multicam',     name: 'Multicam',       fill: { type: 'texture', url: '/textures/multicam.svg' } },
+  { id: 'flecktarn',    name: 'Flecktarn',      fill: { type: 'texture', url: '/textures/flecktarn.svg' } },
 ]

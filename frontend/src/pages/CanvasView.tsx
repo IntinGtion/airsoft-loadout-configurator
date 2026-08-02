@@ -7,9 +7,9 @@ import { useComponents } from '../hooks/useComponents'
 import { CategoryNav } from '../components/CategoryNav'
 import { LoadoutSidebar } from '../components/LoadoutSidebar'
 import { CanvasNode, CHILD_DISPLAY_WIDTH_FALLBACK, type DropCandidate } from '../components/canvas/CanvasNode'
-import { COLORWAYS } from '../components/canvas/colorways'
+import { COLORWAYS, type Colorway } from '../components/canvas/colorways'
 import { getDisplayWidth } from '../components/canvas/scale'
-import { getRecoloredSvgUrl } from '../components/canvas/recolorSvg'
+import { resolveComponentUrl } from '../components/canvas/textureCompositor'
 import { getAnchorMountPointPercent, computeFootprintPreview } from '../components/canvas/footprint'
 import styles from './CanvasView.module.css'
 
@@ -33,7 +33,7 @@ export function CanvasView() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [colorway, setColorway] = useState<string | null>(null)
+  const [colorway, setColorway] = useState<Colorway | null>(null)
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
 
   // Native HTML5 drag-and-drop (draggable/dragstart/dragover/drop) turned out to be
@@ -62,7 +62,7 @@ export function CanvasView() {
   useEffect(() => {
     let cancelled = false
     const svgAssetPath = draggingComponent?.svgAssetPath
-    const resolved = svgAssetPath ? getRecoloredSvgUrl(svgAssetPath, colorway) : Promise.resolve(null)
+    const resolved = svgAssetPath ? resolveComponentUrl(svgAssetPath, colorway) : Promise.resolve(null)
     resolved.then(url => {
       if (!cancelled) setDragPreviewUrl(url)
     })
@@ -335,14 +335,20 @@ export function CanvasView() {
           <span className={styles.colorwayLabel}>Colorway</span>
           {COLORWAYS.map(cw => (
             <button
-              key={cw.name}
+              key={cw.id}
               type="button"
-              className={`${styles.colorwaySwatch} ${colorway === cw.hex ? styles.colorwaySwatchActive : ''}`}
-              style={cw.hex ? { background: cw.hex } : undefined}
+              className={`${styles.colorwaySwatch} ${colorway?.id === cw.id || (!colorway && !cw.fill) ? styles.colorwaySwatchActive : ''}`}
+              style={
+                cw.fill?.type === 'solid'
+                  ? { background: cw.fill.hex }
+                  : cw.fill?.type === 'texture'
+                    ? { backgroundImage: `url(${cw.fill.url})`, backgroundSize: 'cover' }
+                    : undefined
+              }
               title={cw.name}
-              onClick={() => setColorway(cw.hex)}
+              onClick={() => setColorway(cw.fill ? cw : null)}
             >
-              {!cw.hex && '?'}
+              {!cw.fill && 'O'}
             </button>
           ))}
         </div>

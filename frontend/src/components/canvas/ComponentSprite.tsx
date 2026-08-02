@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Image as KonvaImage } from 'react-konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import useImage from 'use-image'
-import { getRecoloredSvgUrl } from './recolorSvg'
+import type { Colorway } from './colorways'
+import { resolveComponentUrl } from './textureCompositor'
 
 interface Props {
   url: string
@@ -10,7 +11,7 @@ interface Props {
   y: number
   width: number
   opacity?: number
-  colorway?: string | null
+  colorway?: Colorway | null
   draggable?: boolean
   onLoad?: (naturalWidth: number, naturalHeight: number) => void
   onClick?: (e: KonvaEventObject<MouseEvent>) => void
@@ -37,12 +38,10 @@ export function ComponentSprite({
 
   useEffect(() => {
     let cancelled = false
-    getRecoloredSvgUrl(url, colorway).then(u => {
+    resolveComponentUrl(url, colorway).then(u => {
       if (!cancelled) setResolvedUrl(u)
     })
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [url, colorway])
 
   const [image] = useImage(resolvedUrl)

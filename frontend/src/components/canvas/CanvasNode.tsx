@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Circle, Group, Rect, Text } from 'react-konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
 import type { ComponentResponse, LoadoutItemResponse, SlotResponse } from '../../api/types'
+import type { Colorway } from './colorways'
 import { ComponentSprite } from './ComponentSprite'
 import { SlotMarker } from './SlotMarker'
 import { computeFootprintSlotIds, getAnchorMountPointPercent } from './footprint'
@@ -43,7 +44,7 @@ interface Props {
   componentsById: Map<number, ComponentResponse>
   childItemsBySlotId: Map<number, LoadoutItemResponse>
   onSlotsComputed: (slots: DropCandidate[]) => void
-  colorway: string | null
+  colorway: Colorway | null
   selectedItemId: number | null
   onSelectItem: (itemId: number | null) => void
   onDeleteItem: (itemId: number) => void
